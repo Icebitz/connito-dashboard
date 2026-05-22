@@ -1,5 +1,5 @@
-import LeaderboardDashboard from "./leaderboard-dashboard";
+import Leaderboard from "./leaderboard";
 
 export default function Home() {
-  return <LeaderboardDashboard />;
+  return <Leaderboard />;
 }

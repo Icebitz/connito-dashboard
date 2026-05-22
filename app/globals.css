@@ -585,6 +585,30 @@ h1 {
   white-space: nowrap;
 }
 
+.phase-stats strong.phase-time-value {
+  line-height: 1.15;
+  white-space: normal;
+}
+
+.phase-time-value em,
+.phase-time-value small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phase-time-value em {
+  font-style: normal;
+}
+
+.phase-time-value small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--font-3xs);
+  font-weight: 800;
+}
+
 .round-stats {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   margin-top: 10px;
@@ -919,7 +943,7 @@ h1 {
   display: grid;
   grid-template-columns: auto auto auto auto minmax(120px, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 24px;
 }
 
 .burn-info {

@@ -99,7 +99,8 @@ function TopMinerStrip({ topMiner, burnPercent }: TopMinerStripProps) {
     <div className="top-miner-strip">
       <div className="top-miner-info">
         <BarChart3 size={17} />
-        <span>Top weight</span>
+        <span>Top Chain Weight</span>
+        <em>{topMiner ? `${formatNumber(topMiner.weight, 6)}` : "-"}</em>
         <strong>
           {topMiner && topMinerHotkeyUrl ? (
             <a className="table-link" href={topMinerHotkeyUrl} target="_blank" rel="noreferrer">
@@ -107,7 +108,6 @@ function TopMinerStrip({ topMiner, burnPercent }: TopMinerStripProps) {
             </a>
           ) : topMiner ? `UID ${topMiner.uid}` : "-"}
         </strong>
-        <em>{topMiner ? `Score: ${formatNumber(topMiner.weight, 4)}` : "-"}</em>
         <small>
           {topMiner && topMinerRepoUrl ? (
             <a className="table-link" href={topMinerRepoUrl} target="_blank" rel="noreferrer">

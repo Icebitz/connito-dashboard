@@ -1,3 +1,5 @@
+import { BLOCK_TIME_SECONDS } from "./constants";
+
 export function formatNumber(value: number | null | undefined, digits = 2) {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return "-";
@@ -66,6 +68,48 @@ export function formatDuration(ms: number) {
   }
 
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+export function formatBlockDuration(blocks: number | null | undefined) {
+  if (blocks === null || blocks === undefined || !Number.isFinite(blocks)) {
+    return "-";
+  }
+
+  const totalSeconds = Math.max(0, Math.round(blocks * BLOCK_TIME_SECONDS));
+  const days = Math.floor(totalSeconds / 86_400);
+  const hours = Math.floor((totalSeconds % 86_400) / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  }
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+
+  return `${seconds}s`;
+}
+
+export function formatBlockCount(blocks: number | null | undefined) {
+  const formatted = formatBlock(blocks);
+  if (formatted === "-") {
+    return "-";
+  }
+
+  return `${formatted} ${blocks === 1 ? "block" : "blocks"}`;
+}
+
+export function formatBlockDurationWithCount(blocks: number | null | undefined) {
+  const duration = formatBlockDuration(blocks);
+  const count = formatBlockCount(blocks);
+
+  return duration === "-" || count === "-" ? "-" : `${duration} (${count})`;
 }
 
 export function shortText(value: string, start = 8, end = 6) {

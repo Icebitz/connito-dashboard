@@ -1,6 +1,6 @@
 import { Activity, CheckCircle2, Database, Gauge, Users, X } from "lucide-react";
 
-import { formatBlock, formatInteger, formatNumber } from "../format";
+import { formatBlock, formatBlockCount, formatBlockDuration, formatInteger, formatNumber } from "../format";
 import type { DashboardModel } from "../types";
 import { SectionTitle } from "./section-title";
 
@@ -32,8 +32,8 @@ export function PhasePanels({ phase, round, scoredPercent }: PhasePanelsProps) {
             <strong>{formatBlock(phase.phaseEnd)}</strong>
           </div>
           <div>
-            <span>Block</span>
-            <strong>{formatInteger(phase.cycleBlock)} / {formatInteger(phase.cycleLength)}</strong>
+            <span>Elapsed</span>
+            <PhaseTimeValue blocks={phase.cycleBlock} totalBlocks={phase.cycleLength} />
           </div>
           <div>
             <span>Cycle</span>
@@ -41,7 +41,7 @@ export function PhasePanels({ phase, round, scoredPercent }: PhasePanelsProps) {
           </div>
           <div>
             <span>Remain</span>
-            <strong>{formatInteger(phase.blocksRemaining)}</strong>
+            <PhaseTimeValue blocks={phase.blocksRemaining} />
           </div>
         </div>
       </article>
@@ -82,5 +82,18 @@ export function PhasePanels({ phase, round, scoredPercent }: PhasePanelsProps) {
         </div>
       </article>
     </section>
+  );
+}
+
+function PhaseTimeValue({ blocks, totalBlocks }: { blocks: number | null; totalBlocks?: number | null }) {
+  const title = totalBlocks === undefined
+    ? formatBlockCount(blocks)
+    : `${formatBlockCount(blocks)} / ${formatBlockCount(totalBlocks)}`;
+
+  return (
+    <strong className="phase-time-value" title={title}>
+      <em>{formatBlockDuration(blocks)}{totalBlocks === undefined ? "" : ` / ${formatBlockDuration(totalBlocks)}`}</em>
+      <small>{title}</small>
+    </strong>
   );
 }

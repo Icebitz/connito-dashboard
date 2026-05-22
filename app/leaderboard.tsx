@@ -2,15 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { CompactMeta } from "./dashboard/components/compact-meta";
 import { DashboardHeader } from "./dashboard/components/dashboard-header";
 import { LeaderboardSection } from "./dashboard/components/leaderboard-section";
 import { MetricChartsSection } from "./dashboard/components/metric-charts-section";
 import { Notice } from "./dashboard/components/notice";
 import { OverviewGrid } from "./dashboard/components/overview-grid";
-import { PhasePanels } from "./dashboard/components/phase-panels";
+import { PhasePanels, RoundHealthPanel } from "./dashboard/components/phase-panels";
 import { RoundTrendSection } from "./dashboard/components/round-trend-section";
-import { UpcomingPhases } from "./dashboard/components/upcoming-phases";
 import { REFRESH_MS, SYNC_COUNTER_MS, THEME_STORAGE_KEY } from "./dashboard/constants";
 import { formatDuration } from "./dashboard/format";
 import { buildDashboardModel, getMinerKey } from "./dashboard/model";
@@ -122,22 +120,13 @@ export default function Leaderboard() {
         onThemeToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")}
       />
 
-      <CompactMeta
-        lastSync={lastSync}
-        syncCounter={syncCounter}
-        shownRows={filteredRows.length}
-        totalRows={model.metrics.rows}
-        assignedRows={model.metrics.assigned}
-        burnPercent={model.metrics.burnPercent}
-        topScore={model.metrics.topScore}
-        averageScore={model.metrics.averageScore}
-      />
-
       <Notice message={error} />
       <OverviewGrid model={model} syncCounter={syncCounter} />
-      <PhasePanels phase={model.phase} round={model.round} scoredPercent={scoredPercent} />
-      <UpcomingPhases phases={model.phase.upcoming} />
-      <RoundTrendSection points={model.round.history} />
+      <PhasePanels phase={model.phase} />
+      <section className="round-row" aria-label="Round loss and health">
+        <RoundTrendSection points={model.round.history} />
+        <RoundHealthPanel round={model.round} scoredPercent={scoredPercent} />
+      </section>
       <MetricChartsSection rows={model.rows} />
       <LeaderboardSection
         filteredRows={filteredRows}
@@ -148,6 +137,18 @@ export default function Leaderboard() {
         onQueryChange={setQuery}
         onToggleMinerDetails={toggleMinerDetails}
       />
+      <footer className="site-footer">
+        <div>
+          <strong>Connito Subnet {model.subnet.netuid}</strong>
+          <span>Leaderboard dashboard</span>
+        </div>
+        <div className="site-footer-meta">
+          <span>Status {status}</span>
+          <span>Synced {syncCounter}</span>
+          <span>Last updated {lastSync}</span>
+          <span>Subnet {model.subnet.netuid}</span>
+        </div>
+      </footer>
     </main>
   );
 }

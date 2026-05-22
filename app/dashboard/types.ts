@@ -94,6 +94,7 @@ export type DashboardModel = {
     assigned: number;
     topScore: number | null;
     averageScore: number | null;
+    topWeight: number | null;
     totalWeight: number | null;
     burnPercent: number | null;
   };

@@ -26,12 +26,19 @@ export function UpcomingPhases({ phases }: UpcomingPhasesProps) {
                 <span title={`${formatInteger(phase.blocksUntilStart)} blocks`}>{index === 0 ? "Next" : `+${formatBlockDuration(phase.blocksUntilStart)}`}</span>
                 <strong>{phase.name}</strong>
               </div>
-              <div className="phase-step-meta">
-                <span>In {formatBlockDurationWithCount(phase.blocksUntilStart)}</span>
-                <span>{blockRange}</span>
-                {phase.duration === null
-                  ? phase.actor && <span>{phase.actor}</span>
-                  : <span>{formatBlockDurationWithCount(phase.duration)}</span>}
+              <div className="phase-step-values">
+                <span className="phase-step-value phase-step-value-start">
+                  <em>Starts</em>
+                  <strong>{formatBlockDurationWithCount(phase.blocksUntilStart)}</strong>
+                </span>
+                <span className="phase-step-value phase-step-value-range">
+                  <em>Blocks</em>
+                  <strong>{blockRange}</strong>
+                </span>
+                <span className="phase-step-value phase-step-value-duration">
+                  <em>{phase.duration === null ? "Actor" : "Duration"}</em>
+                  <strong>{phase.duration === null ? phase.actor ?? "-" : formatBlockDurationWithCount(phase.duration)}</strong>
+                </span>
               </div>
             </article>
           );

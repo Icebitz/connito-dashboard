@@ -9,7 +9,7 @@ type RoundTrendSectionProps = {
 export function RoundTrendSection({ points }: RoundTrendSectionProps) {
   return (
     <section className="round-chart-section">
-      <SectionTitle eyebrow="Baseline Trend" title="Recent Round Loss" />
+      <SectionTitle eyebrow="Round Trend" title="Round Loss" />
       <MiniLineChart points={points} />
     </section>
   );

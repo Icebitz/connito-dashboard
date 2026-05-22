@@ -55,7 +55,7 @@ type MetricChartsSectionProps = {
 export function MetricChartsSection({ rows }: MetricChartsSectionProps) {
   return (
     <section className="metric-chart-section">
-      <SectionTitle eyebrow="Leaderboard Metrics" title="Scores and Weights" />
+      <SectionTitle eyebrow="Leaderboard Metrics" title="Weights and Scores" />
       <div className="metric-chart-grid">
         <MetricBarChart title="Top Weights" label="Weight" rows={rows} metric="weight" digits={4} />
         <MetricBarChart title="Top Scores" label="Score" rows={rows} metric="score" digits={4} />

@@ -321,6 +321,7 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
       assigned,
       topScore: scores.length ? Math.max(...scores) : null,
       averageScore: scores.length ? scores.reduce((sum, value) => sum + value, 0) / scores.length : null,
+      topWeight: weights.length ? Math.max(...weights) : null,
       totalWeight: weights.length ? weights.reduce((sum, value) => sum + value, 0) : null,
       burnPercent: getBurnPercent(burnRow?.weight, totalWeightIncludingBurn || null)
     },

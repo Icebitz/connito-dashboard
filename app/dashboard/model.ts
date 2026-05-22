@@ -183,31 +183,39 @@ function getRoundHistory(round: Record<string, unknown> | null): HistoryPoint[] 
     .slice(-48);
 }
 
-function getUpcomingPhases(cycleData: Record<string, unknown>, headBlock: number | null): UpcomingPhase[] {
-  const windows = isRecord(cycleData.blocksUntilNextPhase) ? cycleData.blocksUntilNextPhase : {};
-
-  return Object.entries(windows)
-    .map(([name, rawWindow]) => {
-      let startBlock: number | null = null;
-      let endBlock: number | null = null;
-      let blocksUntilStart: number | null = null;
-
-      if (Array.isArray(rawWindow)) {
-        startBlock = asNumber(rawWindow[0]);
-        endBlock = asNumber(rawWindow[1]);
-        blocksUntilStart = asNumber(rawWindow[2]);
-      } else if (isRecord(rawWindow)) {
-        startBlock = asNumber(rawWindow.start_block) ?? asNumber(rawWindow.phase_start_block) ?? asNumber(rawWindow.start);
-        endBlock = asNumber(rawWindow.end_block) ?? asNumber(rawWindow.phase_end_block) ?? asNumber(rawWindow.end);
-        blocksUntilStart = asNumber(rawWindow.blocks_until_start) ?? asNumber(rawWindow.blocks_until) ?? asNumber(rawWindow.blocks_remaining);
+function completeUpcomingPhases(phases: UpcomingPhase[]) {
+  return phases
+    .sort((a, b) => a.blocksUntilStart - b.blocksUntilStart || a.startBlock - b.startBlock || a.name.localeCompare(b.name))
+    .map((phase, index, sortedPhases) => {
+      if (phase.endBlock !== null) {
+        return phase;
       }
 
-      if (startBlock === null || endBlock === null) {
-        return null;
-      }
+      const nextStartBlock = sortedPhases[index + 1]?.startBlock ?? null;
+      const endBlock = nextStartBlock !== null && nextStartBlock > phase.startBlock ? nextStartBlock - 1 : null;
 
-      const resolvedBlocksUntilStart = blocksUntilStart ?? (headBlock === null ? null : startBlock - headBlock);
-      if (resolvedBlocksUntilStart === null || resolvedBlocksUntilStart < 0) {
+      return {
+        ...phase,
+        endBlock,
+        duration: endBlock === null ? phase.duration : endBlock - phase.startBlock + 1
+      };
+    });
+}
+
+function getUpcomingPhases(phase: Record<string, unknown> | null, headBlock: number | null): UpcomingPhase[] {
+  const upcoming = Array.isArray(phase?.upcoming) ? phase.upcoming.filter(isRecord) : [];
+
+  const phases = upcoming
+    .map((rawPhase) => {
+      const name = asText(rawPhase.name) ?? asText(rawPhase.phase_name);
+      const startBlock = asNumber(rawPhase.start_block) ?? asNumber(rawPhase.phase_start_block) ?? asNumber(rawPhase.start);
+      const endBlock = asNumber(rawPhase.end_block) ?? asNumber(rawPhase.phase_end_block) ?? asNumber(rawPhase.end);
+      const blocksUntilStart = asNumber(rawPhase.blocks_until_start)
+        ?? asNumber(rawPhase.blocks_until)
+        ?? asNumber(rawPhase.blocks_remaining)
+        ?? (headBlock === null || startBlock === null ? null : startBlock - headBlock);
+
+      if (name === null || startBlock === null || blocksUntilStart === null || blocksUntilStart < 0) {
         return null;
       }
 
@@ -215,12 +223,14 @@ function getUpcomingPhases(cycleData: Record<string, unknown>, headBlock: number
         name,
         startBlock,
         endBlock,
-        blocksUntilStart: resolvedBlocksUntilStart,
-        duration: endBlock >= startBlock ? endBlock - startBlock + 1 : null
+        blocksUntilStart,
+        duration: endBlock !== null && endBlock >= startBlock ? endBlock - startBlock + 1 : null,
+        actor: asText(rawPhase.actor)
       };
     })
-    .filter((phase): phase is UpcomingPhase => phase !== null)
-    .sort((a, b) => a.blocksUntilStart - b.blocksUntilStart || a.startBlock - b.startBlock || a.name.localeCompare(b.name));
+    .filter((phase): phase is UpcomingPhase => phase !== null);
+
+  return completeUpcomingPhases(phases);
 }
 
 function getProgress(into: number | null, remaining: number | null, start: number | null, end: number | null, head: number | null) {
@@ -235,14 +245,12 @@ function getProgress(into: number | null, remaining: number | null, start: numbe
   return 0;
 }
 
-export function buildDashboardModel(leaderboard: ApiResponse | null, cycle: ApiResponse | null): DashboardModel {
+export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardModel {
   const data = unwrapDashboardData(leaderboard?.data);
-  const cycleData = isRecord(cycle?.data) ? cycle.data : {};
   const subnet = isRecord(data.subnet) ? data.subnet : null;
   const phase = isRecord(data.phase) ? data.phase : null;
   const round = isRecord(data.round) ? data.round : null;
   const roundStats = isRecord(round?.stats) ? round.stats : null;
-  const cyclePhase = isRecord(cycleData.phase) ? cycleData.phase : null;
   const allRows = getLeaderboardRows(data);
   const burnRow = allRows.find(isBurnRow) ?? null;
   const totalWeightIncludingBurn = allRows
@@ -256,25 +264,29 @@ export function buildDashboardModel(leaderboard: ApiResponse | null, cycle: ApiR
       rank: index + 1
     }));
   const history = getRoundHistory(round);
-  const phaseName = asText(cyclePhase?.phase_name) ?? asText(phase?.name) ?? "-";
-  const headBlock = asNumber(cyclePhase?.block) ?? asNumber(phase?.head_block);
-  const phaseStart = asNumber(cyclePhase?.phase_start_block) ?? asNumber(phase?.started_at_block);
-  const phaseEnd = asNumber(cyclePhase?.phase_end_block) ?? asNumber(phase?.ends_at_block);
-  const blocksInto = asNumber(cyclePhase?.blocks_into_phase);
-  const blocksRemaining = asNumber(cyclePhase?.blocks_remaining_in_phase) ?? asNumber(phase?.blocks_remaining);
-  const cycleIndex = asNumber(cyclePhase?.cycle_index) ?? asNumber(phase?.cycle_index);
-  const cycleLength = asNumber(cyclePhase?.cycle_length) ?? asNumber(phase?.cycle_length);
-  const cycleBlock = asNumber(cyclePhase?.cycle_block_index);
-  const upcomingPhases = getUpcomingPhases(cycleData, headBlock);
+  const phaseName = asText(phase?.name) ?? "-";
+  const headBlock = asNumber(phase?.head_block);
+  const phaseStart = asNumber(phase?.started_at_block);
+  const phaseEnd = asNumber(phase?.ends_at_block);
+  const blocksInto = headBlock !== null && phaseStart !== null ? headBlock - phaseStart : null;
+  const blocksRemaining = asNumber(phase?.blocks_remaining);
+  const cycleIndex = asNumber(phase?.cycle_index);
+  const cycleLength = asNumber(phase?.cycle_length);
+  const cycleStart = cycleIndex !== null && cycleLength !== null ? cycleIndex * cycleLength : null;
+  const cycleBlockFromIndex = headBlock !== null && cycleStart !== null ? headBlock - cycleStart : null;
+  const cycleBlock = cycleBlockFromIndex !== null && cycleBlockFromIndex >= 0
+    ? cycleBlockFromIndex
+    : headBlock !== null && phaseStart !== null ? headBlock - phaseStart : null;
+  const upcomingPhases = getUpcomingPhases(phase, headBlock);
   const scores = rows.map((row) => row.score).filter((value): value is number => value !== null);
   const weights = rows.map((row) => row.weight).filter((value): value is number => value !== null);
   const assigned = rows.filter((row) => row.assigned === true).length;
 
   return {
     source: typeof leaderboard?.source === "string" ? leaderboard.source : LEADERBOARD_SOURCE,
-    fetchedAt: leaderboard?.fetchedAt ?? cycle?.fetchedAt ?? null,
-    stale: Boolean(leaderboard?.stale || cycle?.stale),
-    empty: Boolean(leaderboard?.empty || cycle?.empty),
+    fetchedAt: leaderboard?.fetchedAt ?? null,
+    stale: Boolean(leaderboard?.stale),
+    empty: Boolean(leaderboard?.empty),
     subnet: {
       netuid: asNumber(subnet?.netuid) ?? 102,
       miners: asNumber(subnet?.total_miners) ?? rows.length,

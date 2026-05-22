@@ -18,7 +18,6 @@ import type { ApiResponse, DashboardStatus, MinerRow, Theme } from "./dashboard/
 
 export default function Leaderboard() {
   const [leaderboard, setLeaderboard] = useState<ApiResponse | null>(null);
-  const [cycle, setCycle] = useState<ApiResponse | null>(null);
   const [query, setQuery] = useState("");
   const [theme, setTheme] = useState<Theme>("dark");
   const [themeReady, setThemeReady] = useState(false);
@@ -32,27 +31,15 @@ export default function Leaderboard() {
     setError(null);
 
     try {
-      const [leaderboardResponse, cycleResponse] = await Promise.all([
-        fetch(`/api/leaderboard?t=${Date.now()}`, { cache: "no-store" }),
-        fetch(`/api/cycle?t=${Date.now()}`, { cache: "no-store" })
-      ]);
-
-      const [leaderboardBody, cycleBody] = (await Promise.all([
-        leaderboardResponse.json(),
-        cycleResponse.json()
-      ])) as [ApiResponse, ApiResponse];
+      const leaderboardResponse = await fetch(`/api/leaderboard?t=${Date.now()}`, { cache: "no-store" });
+      const leaderboardBody = (await leaderboardResponse.json()) as ApiResponse;
 
       if (!leaderboardResponse.ok || !leaderboardBody.ok) {
         throw new Error(leaderboardBody.error ?? "Leaderboard request failed.");
       }
 
-      if (!cycleResponse.ok || !cycleBody.ok) {
-        throw new Error(cycleBody.error ?? "Cycle request failed.");
-      }
-
       setLeaderboard(leaderboardBody);
-      setCycle(cycleBody);
-      setError(leaderboardBody.warning ?? cycleBody.warning ?? null);
+      setError(leaderboardBody.warning ?? null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to refresh dashboard data.");
     } finally {
@@ -89,7 +76,7 @@ export default function Leaderboard() {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme, themeReady]);
 
-  const model = useMemo(() => buildDashboardModel(leaderboard, cycle), [cycle, leaderboard]);
+  const model = useMemo(() => buildDashboardModel(leaderboard), [leaderboard]);
 
   const filteredRows = useMemo(() => {
     const needle = query.trim().toLowerCase();

@@ -45,9 +45,10 @@ export type HistoryPoint = {
 export type UpcomingPhase = {
   name: string;
   startBlock: number;
-  endBlock: number;
+  endBlock: number | null;
   blocksUntilStart: number;
   duration: number | null;
+  actor: string | null;
 };
 
 export type Theme = "dark" | "light";

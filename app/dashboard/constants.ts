@@ -4,5 +4,7 @@ export const BLOCK_TIME_SECONDS = 12;
 export const LEADERBOARD_SOURCE = "https://dashboard-api.connito.ai/api/v2/leaderboard";
 export const THEME_STORAGE_KEY = "connito-dashboard-theme";
 export const VALIDATOR_COLUMN_COUNT = 5;
-export const LEADERBOARD_COLUMN_COUNT = 5 + VALIDATOR_COLUMN_COUNT * 2;
+export const LEADERBOARD_BASE_COLUMN_COUNT = 9;
+export const VALIDATOR_METRIC_COLUMN_COUNT = 3;
+export const LEADERBOARD_COLUMN_COUNT = LEADERBOARD_BASE_COLUMN_COUNT + VALIDATOR_COLUMN_COUNT * VALIDATOR_METRIC_COLUMN_COUNT;
 export const VALIDATOR_COLUMNS = Array.from({ length: VALIDATOR_COLUMN_COUNT }, (_, index) => index);

@@ -1336,7 +1336,7 @@ thead th {
 
 .table-frame > table > thead th:first-child,
 .table-frame > table > thead th:nth-child(2),
-.table-frame > table > thead th:nth-child(n + 5) {
+.table-frame > table > thead th:nth-child(n + 6) {
   text-align: right;
 }
 
@@ -1356,8 +1356,21 @@ thead th {
   min-width: 136px;
 }
 
+.revision-column {
+  min-width: 86px;
+}
+
 .weight-column {
   min-width: 84px;
+}
+
+.loss-column,
+.delta-loss-column {
+  min-width: 84px;
+}
+
+.assigned-column {
+  min-width: 74px;
 }
 
 tbody td {
@@ -1392,19 +1405,28 @@ tbody td {
 
 .hotkey-column,
 .repo-column,
+.revision-column,
 .miner-summary-grid strong[title] {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
 .leaderboard-row .hotkey-column,
-.leaderboard-row .repo-column {
+.leaderboard-row .repo-column,
+.leaderboard-row .revision-column {
   font-size: var(--font-xs);
 }
 
-.leaderboard-row .weight-column {
+.leaderboard-row .weight-column,
+.leaderboard-row .loss-column,
+.leaderboard-row .delta-loss-column {
   color: var(--green);
   font-size: var(--font-xs);
   font-weight: 800;
+}
+
+.leaderboard-row .loss-column,
+.leaderboard-row .delta-loss-column {
+  color: var(--amber);
 }
 
 tbody tr:nth-child(even) {
@@ -1440,13 +1462,13 @@ tbody tr.leaderboard-details-row:nth-child(even) {
 
 tbody td:first-child,
 tbody td:nth-child(2),
-tbody td:nth-child(n + 5) {
+tbody td:nth-child(n + 6) {
   text-align: right;
 }
 
 .validator-metric-heading,
 .validator-metric-cell {
-  min-width: 76px;
+  min-width: 84px;
 }
 
 .validator-metric-heading {
@@ -1457,6 +1479,11 @@ tbody td:nth-child(n + 5) {
 .validator-metric-cell {
   color: var(--table-text);
   font-size: var(--font-sm);
+}
+
+.validator-status-cell {
+  font-size: var(--font-xs);
+  text-transform: capitalize;
 }
 
 .validator-1-column {
@@ -1570,7 +1597,7 @@ tbody td.leaderboard-details-cell {
 
 .validator-detail-table {
   width: 100%;
-  min-width: 0;
+  min-width: 760px;
   table-layout: fixed;
   font-size: var(--font-xs);
 }
@@ -1583,8 +1610,7 @@ tbody td.leaderboard-details-cell {
 }
 
 .validator-detail-table thead th:nth-child(2),
-.validator-detail-table thead th:nth-child(3),
-.validator-detail-table thead th:nth-child(4) {
+.validator-detail-table thead th:nth-child(n + 5) {
   text-align: right;
 }
 
@@ -1596,16 +1622,16 @@ tbody td.leaderboard-details-cell {
   white-space: nowrap;
 }
 
-.validator-detail-table tbody td:nth-child(3),
-.validator-detail-table tbody td:nth-child(4) {
+.validator-detail-table tbody td:nth-child(5),
+.validator-detail-table tbody td:nth-child(6),
+.validator-detail-table tbody td:nth-child(7) {
   color: var(--green);
   font-size: var(--font-sm);
   font-weight: 800;
 }
 
 .validator-detail-table tbody td:nth-child(2),
-.validator-detail-table tbody td:nth-child(3),
-.validator-detail-table tbody td:nth-child(4) {
+.validator-detail-table tbody td:nth-child(n + 5) {
   text-align: right;
 }
 

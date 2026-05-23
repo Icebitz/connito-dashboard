@@ -2,10 +2,10 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { NextResponse } from "next/server";
 
-const SOURCE_URL = "https://dashboard-api.connito.ai/api/v1/leaderboard";
+const SOURCE_URL = "https://dashboard-api.connito.ai/api/v2/leaderboard";
 const UPSTREAM_TIMEOUT_MS = 20_000;
 const MAX_ATTEMPTS = 2;
-const CACHE_FILE = join(process.cwd(), ".next", "cache", "connito-leaderboard.json");
+const CACHE_FILE = join(process.cwd(), ".next", "cache", "connito-leaderboard-v2.json");
 
 type CachedLeaderboard = {
   fetchedAt: string;

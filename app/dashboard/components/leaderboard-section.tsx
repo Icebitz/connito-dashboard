@@ -177,7 +177,7 @@ function LeaderboardRow({ row, selected, onToggleMinerDetails }: LeaderboardRowP
         </td>
         <td className="weight-column">{rowWeight}</td>
         {VALIDATOR_COLUMNS.map((index) => {
-          const metric = row.validatorMetrics[index];
+          const metric = getValidatorMetricForColumn(row, index);
           const score = formatMetricNumber(metric?.score, 4);
           const valLoss = formatMetricNumber(metric?.valLoss, 4);
 
@@ -208,6 +208,11 @@ function LeaderboardRow({ row, selected, onToggleMinerDetails }: LeaderboardRowP
       ) : null}
     </Fragment>
   );
+}
+
+function getValidatorMetricForColumn(row: MinerRow, index: number) {
+  const hasSlots = row.validatorMetrics.some((metric) => metric.slot !== null);
+  return hasSlots ? row.validatorMetrics.find((metric) => metric.slot === index + 1) : row.validatorMetrics[index];
 }
 
 function MinerValidatorDetails({ row }: { row: MinerRow }) {

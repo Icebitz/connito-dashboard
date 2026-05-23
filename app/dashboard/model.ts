@@ -52,6 +52,11 @@ function asBoolean(value: unknown) {
   return null;
 }
 
+function averageNumbers(values: Array<number | null | undefined>) {
+  const numbers = values.filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
+  return numbers.length ? numbers.reduce((sum, value) => sum + value, 0) / numbers.length : null;
+}
+
 function unwrapDashboardData(payload: unknown) {
   if (isRecord(payload) && isRecord(payload.data)) {
     return payload.data;
@@ -74,6 +79,11 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
   if (metrics.length) {
     return metrics.map((metric, index) => {
       const slot = asNumber(metric.validator_slot) ?? asNumber(metric.slot);
+      const score = asNumber(metric.score)
+        ?? asNumber(metric.score_avg)
+        ?? asNumber(metric.avg_score)
+        ?? asNumber(metric.score_latest)
+        ?? asNumber(metric.latest_score);
 
       return {
         label: asText(metric.validator_label) ?? asText(metric.label) ?? (slot === null ? `Validator ${index + 1}` : `val-${String(slot).padStart(2, "0")}`),
@@ -81,7 +91,7 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
         uid: asNumber(metric.validator_uid) ?? asNumber(metric.uid),
         chainUid: asNumber(metric.validator_chain_uid),
         hotkey: asText(metric.validator_hotkey) ?? "-",
-        score: asNumber(metric.score),
+        score,
         valLoss: asNumber(metric.val_loss) ?? asNumber(metric.validation_loss) ?? asNumber(metric.loss),
         weightSubmitted: asNumber(metric.weight_submitted) ?? asNumber(metric.weight),
         extractedAtBlock: asNumber(metric.extracted_at_block) ?? asNumber(metric.block)
@@ -115,19 +125,28 @@ function getLeaderboardRows(data: Record<string, unknown>): MinerRow[] {
   const records = Array.isArray(data.leaderboard) ? data.leaderboard.filter(isRecord) : [];
 
   return records
-    .map((row) => ({
-      uid: asText(row.uid) ?? asText(row.miner_uid) ?? "-",
-      hotkey: asText(row.hotkey) ?? "-",
-      repo: asText(row.hf_repo_id) ?? "-",
-      revision: asText(row.hf_revision) ?? "-",
-      score: asNumber(row.score),
-      loss: asNumber(row.val_loss) ?? asNumber(row.loss) ?? asNumber(row.validation_loss),
-      deltaLoss: asNumber(row.delta_loss) ?? asNumber(row.loss_delta) ?? asNumber(row.deltaLoss),
-      weight: asNumber(row.chain_weight_stake_weighted) ?? asNumber(row.weight_submitted),
-      evaluations: asNumber(row.evaluation_count) ?? asNumber(row.scored_by_count),
-      assigned: asBoolean(row.in_assignment),
-      validatorMetrics: getValidatorMetrics(row)
-    }))
+    .map((row) => {
+      const validatorMetrics = getValidatorMetrics(row);
+
+      return {
+        uid: asText(row.uid) ?? asText(row.miner_uid) ?? "-",
+        hotkey: asText(row.hotkey) ?? "-",
+        repo: asText(row.hf_repo_id) ?? "-",
+        revision: asText(row.hf_revision) ?? "-",
+        score: asNumber(row.score)
+          ?? asNumber(row.score_avg)
+          ?? asNumber(row.avg_score)
+          ?? asNumber(row.score_latest)
+          ?? asNumber(row.latest_score)
+          ?? averageNumbers(validatorMetrics.map((metric) => metric.score)),
+        loss: asNumber(row.val_loss) ?? asNumber(row.loss) ?? asNumber(row.validation_loss),
+        deltaLoss: asNumber(row.delta_loss) ?? asNumber(row.loss_delta) ?? asNumber(row.deltaLoss),
+        weight: asNumber(row.chain_weight_stake_weighted) ?? asNumber(row.weight_submitted),
+        evaluations: asNumber(row.evaluation_count) ?? asNumber(row.scored_by_count),
+        assigned: asBoolean(row.in_assignment),
+        validatorMetrics
+      };
+    })
     .sort((a, b) => {
       const weightDelta = (b.weight ?? Number.NEGATIVE_INFINITY) - (a.weight ?? Number.NEGATIVE_INFINITY);
       if (weightDelta !== 0) {

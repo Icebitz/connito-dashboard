@@ -52,6 +52,12 @@ function asBoolean(value: unknown) {
   return null;
 }
 
+function asTextArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.map(asText).filter((item): item is string => item !== null)
+    : [];
+}
+
 function averageNumbers(values: Array<number | null | undefined>) {
   const numbers = values.filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
   return numbers.length ? numbers.reduce((sum, value) => sum + value, 0) / numbers.length : null;
@@ -84,6 +90,8 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
         ?? asNumber(metric.avg_score)
         ?? asNumber(metric.score_latest)
         ?? asNumber(metric.latest_score);
+      const scoreLatest = asNumber(metric.score_latest) ?? asNumber(metric.latest_score);
+      const scoreAverage = asNumber(metric.score_avg) ?? asNumber(metric.avg_score) ?? asNumber(metric.score);
 
       return {
         label: asText(metric.validator_label) ?? asText(metric.label) ?? (slot === null ? `Validator ${index + 1}` : `val-${String(slot).padStart(2, "0")}`),
@@ -92,9 +100,16 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
         chainUid: asNumber(metric.validator_chain_uid),
         hotkey: asText(metric.validator_hotkey) ?? "-",
         score,
+        scoreLatest,
+        scoreAverage,
+        scoreSamples: asNumber(metric.score_samples),
         valLoss: asNumber(metric.val_loss) ?? asNumber(metric.validation_loss) ?? asNumber(metric.loss),
         weightSubmitted: asNumber(metric.weight_submitted) ?? asNumber(metric.weight),
-        extractedAtBlock: asNumber(metric.extracted_at_block) ?? asNumber(metric.block)
+        extractedAtBlock: asNumber(metric.extracted_at_block) ?? asNumber(metric.block),
+        validatorStatus: asText(metric.validator_status),
+        evalStatusCode: asNumber(metric.eval_status_code),
+        evalStatusLabel: asText(metric.eval_status_label),
+        failureReasons: asTextArray(metric.observed_failure_reasons)
       };
     });
   }
@@ -114,9 +129,16 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
       chainUid: null,
       hotkey: "-",
       score: null,
+      scoreLatest: null,
+      scoreAverage: null,
+      scoreSamples: null,
       valLoss: null,
       weightSubmitted: null,
-      extractedAtBlock: null
+      extractedAtBlock: null,
+      validatorStatus: null,
+      evalStatusCode: null,
+      evalStatusLabel: null,
+      failureReasons: []
     };
   });
 }

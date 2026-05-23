@@ -52,14 +52,21 @@ export function LeaderboardSection({
               <th className="uid-column">UID</th>
               <th className="hotkey-column">Hotkey</th>
               <th className="repo-column">Repository</th>
+              <th className="revision-column">Revision</th>
               <th className="weight-column">Weight</th>
+              <th className="loss-column">Loss</th>
+              <th className="delta-loss-column">Delta</th>
+              <th className="assigned-column">Assigned</th>
               {VALIDATOR_COLUMNS.map((index) => (
                 <Fragment key={`validator-heading-${index}`}>
-                  <th className={`validator-metric-heading validator-${index + 1}-column`} title={`Validator ${index + 1} score`}>
-                    V{index + 1} S
+                  <th className={`validator-metric-heading validator-${index + 1}-column`} title={`Validator ${index + 1} evaluation status`}>
+                    V{index + 1} Eval
                   </th>
                   <th className={`validator-metric-heading validator-${index + 1}-column`} title={`Validator ${index + 1} val loss`}>
-                    V{index + 1} L
+                    V{index + 1} Loss
+                  </th>
+                  <th className={`validator-metric-heading validator-${index + 1}-column`} title={`Validator ${index + 1} average score`}>
+                    V{index + 1} Score
                   </th>
                 </Fragment>
               ))}
@@ -136,6 +143,8 @@ function LeaderboardRow({ row, selected, onToggleMinerDetails }: LeaderboardRowP
   const rowKey = getMinerKey(row);
   const detailsId = `miner-details-${row.rank}-${row.uid}`;
   const rowWeight = formatMetricNumber(row.weight, 4);
+  const rowLoss = formatMetricNumber(row.loss, 4);
+  const rowDeltaLoss = formatMetricNumber(row.deltaLoss, 4);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
     if (event.target instanceof HTMLElement && event.target.closest("a, button, input")) {
@@ -175,25 +184,36 @@ function LeaderboardRow({ row, selected, onToggleMinerDetails }: LeaderboardRowP
             </a>
           ) : shortText(row.repo, 24, 0)}
         </td>
+        <td className="revision-column" title={row.revision}>{shortText(row.revision, 10, 0)}</td>
         <td className="weight-column">{rowWeight}</td>
+        <td className="loss-column">{rowLoss}</td>
+        <td className="delta-loss-column">{rowDeltaLoss}</td>
+        <td className="assigned-column">{row.assigned === null ? "-" : row.assigned ? "Yes" : "No"}</td>
         {VALIDATOR_COLUMNS.map((index) => {
           const metric = getValidatorMetricForColumn(row, index);
           const score = formatMetricNumber(metric?.score, 4);
           const valLoss = formatMetricNumber(metric?.valLoss, 4);
+          const evalStatus = formatEvalStatus(metric?.evalStatusLabel);
 
           return (
             <Fragment key={`${rowKey}-validator-${index}`}>
               <td
-                className={`validator-metric-cell validator-${index + 1}-column`}
-                title={metric ? `${metric.label} score ${score}` : undefined}
+                className={`validator-metric-cell validator-status-cell validator-${index + 1}-column`}
+                title={metric ? `${metric.label} eval ${metric.evalStatusLabel ?? "-"}${metric.failureReasons.length ? ` (${metric.failureReasons.join(", ")})` : ""}` : undefined}
               >
-                {score}
+                {evalStatus}
               </td>
               <td
                 className={`validator-metric-cell validator-${index + 1}-column`}
                 title={metric ? `${metric.label} val loss ${valLoss}` : undefined}
               >
                 {valLoss}
+              </td>
+              <td
+                className={`validator-metric-cell validator-${index + 1}-column`}
+                title={metric ? `${metric.label} score ${score}` : undefined}
+              >
+                {score}
               </td>
             </Fragment>
           );
@@ -213,6 +233,16 @@ function LeaderboardRow({ row, selected, onToggleMinerDetails }: LeaderboardRowP
 function getValidatorMetricForColumn(row: MinerRow, index: number) {
   const hasSlots = row.validatorMetrics.some((metric) => metric.slot !== null);
   return hasSlots ? row.validatorMetrics.find((metric) => metric.slot === index + 1) : row.validatorMetrics[index];
+}
+
+function formatEvalStatus(status: string | null | undefined) {
+  if (!status) {
+    return "-";
+  }
+
+  return status
+    .replace(/^no_chain_commit$/, "no commit")
+    .replace(/_/g, " ");
 }
 
 function MinerValidatorDetails({ row }: { row: MinerRow }) {
@@ -274,8 +304,12 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
             <tr>
               <th>Label</th>
               <th>Slot</th>
+              <th>Status</th>
+              <th>Eval</th>
               <th>Score</th>
               <th>Val Loss</th>
+              <th>Weight</th>
+              <th>Samples</th>
             </tr>
           </thead>
           <tbody>
@@ -284,13 +318,17 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
                 <tr key={`${metric.label}-${metric.uid ?? "uid"}-${metric.slot ?? "slot"}-${index}`}>
                   <td>{metric.label}</td>
                   <td>{formatInteger(metric.slot)}</td>
+                  <td>{metric.validatorStatus ?? "-"}</td>
+                  <td title={metric.failureReasons.length ? metric.failureReasons.join(", ") : undefined}>{formatEvalStatus(metric.evalStatusLabel)}</td>
                   <td>{formatMetricNumber(metric.score, 4)}</td>
                   <td title={metric.valLoss === null ? undefined : String(metric.valLoss)}>{formatMetricNumber(metric.valLoss, 6)}</td>
+                  <td>{formatMetricNumber(metric.weightSubmitted, 4)}</td>
+                  <td>{formatInteger(metric.scoreSamples)}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={4}>No validator metrics reported for this miner.</td>
+                <td colSpan={8}>No validator metrics reported for this miner.</td>
               </tr>
             )}
           </tbody>

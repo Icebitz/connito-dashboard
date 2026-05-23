@@ -31,9 +31,16 @@ export type ValidatorMetric = {
   chainUid: number | null;
   hotkey: string;
   score: number | null;
+  scoreLatest: number | null;
+  scoreAverage: number | null;
+  scoreSamples: number | null;
   valLoss: number | null;
   weightSubmitted: number | null;
   extractedAtBlock: number | null;
+  validatorStatus: string | null;
+  evalStatusCode: number | null;
+  evalStatusLabel: string | null;
+  failureReasons: string[];
 };
 
 export type HistoryPoint = {

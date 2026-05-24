@@ -7,6 +7,7 @@ import { UpcomingPhases } from "./upcoming-phases";
 
 type PhasePanelsProps = {
   phase: DashboardModel["phase"];
+  loadingUpcoming: boolean;
 };
 
 type RoundHealthPanelProps = {
@@ -14,7 +15,7 @@ type RoundHealthPanelProps = {
   scoredPercent: number;
 };
 
-export function PhasePanels({ phase }: PhasePanelsProps) {
+export function PhasePanels({ phase, loadingUpcoming }: PhasePanelsProps) {
   return (
     <section className="work-grid">
       <article className="phase-panel">
@@ -44,7 +45,7 @@ export function PhasePanels({ phase }: PhasePanelsProps) {
         </div>
       </article>
 
-      <UpcomingPhases phases={phase.upcoming} />
+      <UpcomingPhases phases={phase.upcoming} loading={loadingUpcoming} />
     </section>
   );
 }

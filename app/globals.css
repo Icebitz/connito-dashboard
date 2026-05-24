@@ -967,6 +967,43 @@ h1 {
   color: #ffffff;
 }
 
+.phase-step-skeleton {
+  pointer-events: none;
+}
+
+.phase-step-skeleton .phase-step-top span,
+.phase-step-skeleton .phase-step-top strong,
+.phase-step-skeleton .phase-step-value em,
+.phase-step-skeleton .phase-step-value strong {
+  display: block;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+  background-size: 220% 100%;
+  color: transparent;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.phase-step-skeleton .phase-step-top span {
+  width: 58px;
+  height: 22px;
+}
+
+.phase-step-skeleton .phase-step-top strong {
+  width: 58%;
+  height: 22px;
+}
+
+.phase-step-skeleton .phase-step-value em {
+  width: 58px;
+  height: 10px;
+}
+
+.phase-step-skeleton .phase-step-value strong {
+  width: 92%;
+  height: 18px;
+}
+
 .phase-step-values {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1792,6 +1829,16 @@ tbody tr:last-child td {
   50% {
     box-shadow: 0 0 0 7px rgba(73, 208, 139, 0);
     transform: scale(1.18);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+
+  100% {
+    background-position: -120% 0;
   }
 }
 

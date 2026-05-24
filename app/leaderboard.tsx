@@ -122,7 +122,7 @@ export default function Leaderboard() {
 
       <Notice message={error} />
       <OverviewGrid model={model} syncCounter={syncCounter} />
-      <PhasePanels phase={model.phase} />
+      <PhasePanels phase={model.phase} loadingUpcoming={loading && leaderboard === null} />
       <section className="round-row" aria-label="Round loss and health">
         <RoundTrendSection points={model.round.history} />
         <RoundHealthPanel round={model.round} scoredPercent={scoredPercent} />

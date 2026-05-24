@@ -4,11 +4,44 @@ import { SectionTitle } from "./section-title";
 
 type UpcomingPhasesProps = {
   phases: UpcomingPhase[];
+  loading: boolean;
 };
 
-export function UpcomingPhases({ phases }: UpcomingPhasesProps) {
+export function UpcomingPhases({ phases, loading }: UpcomingPhasesProps) {
   if (!phases.length) {
-    return null;
+    if (!loading) {
+      return null;
+    }
+
+    return (
+      <section className="upcoming-phase-section" aria-label="Upcoming phases">
+        <SectionTitle eyebrow="Upcoming Phases" />
+        <div className="phase-timeline" aria-hidden="true">
+          {Array.from({ length: 3 }, (_, index) => (
+            <article className={`phase-step phase-step-skeleton${index === 0 ? " phase-step-next" : ""}`} key={`phase-skeleton-${index}`}>
+              <div className="phase-step-top">
+                <span />
+                <strong />
+              </div>
+              <div className="phase-step-values">
+                <span className="phase-step-value phase-step-value-start">
+                  <em />
+                  <strong />
+                </span>
+                <span className="phase-step-value phase-step-value-range">
+                  <em />
+                  <strong />
+                </span>
+                <span className="phase-step-value phase-step-value-duration">
+                  <em />
+                  <strong />
+                </span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    );
   }
 
   return (

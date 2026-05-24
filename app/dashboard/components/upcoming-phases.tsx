@@ -1,4 +1,4 @@
-import { formatBlock, formatBlockDuration, formatBlockDurationWithCount, formatInteger } from "../format";
+import { formatBlock, formatBlockCount, formatBlockDuration, formatInteger } from "../format";
 import type { UpcomingPhase } from "../types";
 import { SectionTitle } from "./section-title";
 
@@ -13,7 +13,7 @@ export function UpcomingPhases({ phases }: UpcomingPhasesProps) {
 
   return (
     <section className="upcoming-phase-section" aria-label="Upcoming phases">
-      <SectionTitle eyebrow="Phase Schedule" title="Upcoming Phases" />
+      <SectionTitle eyebrow="Upcoming Phases" />
       <div className="phase-timeline">
         {phases.map((phase, index) => {
           const blockRange = phase.endBlock === null
@@ -29,7 +29,7 @@ export function UpcomingPhases({ phases }: UpcomingPhasesProps) {
               <div className="phase-step-values">
                 <span className="phase-step-value phase-step-value-start">
                   <em>Starts</em>
-                  <strong>{formatBlockDurationWithCount(phase.blocksUntilStart)}</strong>
+                  <DurationWithBlocks blocks={phase.blocksUntilStart} />
                 </span>
                 <span className="phase-step-value phase-step-value-range">
                   <em>Blocks</em>
@@ -37,7 +37,7 @@ export function UpcomingPhases({ phases }: UpcomingPhasesProps) {
                 </span>
                 <span className="phase-step-value phase-step-value-duration">
                   <em>{phase.duration === null ? "Actor" : "Duration"}</em>
-                  <strong>{phase.duration === null ? phase.actor ?? "-" : formatBlockDurationWithCount(phase.duration)}</strong>
+                  {phase.duration === null ? <strong>{phase.actor ?? "-"}</strong> : <DurationWithBlocks blocks={phase.duration} />}
                 </span>
               </div>
             </article>
@@ -45,5 +45,14 @@ export function UpcomingPhases({ phases }: UpcomingPhasesProps) {
         })}
       </div>
     </section>
+  );
+}
+
+function DurationWithBlocks({ blocks }: { blocks: number | null }) {
+  return (
+    <strong className="duration-with-blocks" title={formatBlockCount(blocks)}>
+      <span>{formatBlockDuration(blocks)}</span>
+      <small>{formatBlockCount(blocks)}</small>
+    </strong>
   );
 }

@@ -79,12 +79,10 @@ export default function Leaderboard() {
   const filteredRows = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) {
-      return model.rows.slice(0, 100);
+      return model.rows;
     }
 
-    return model.rows
-      .filter((row) => `${row.uid} ${row.hotkey} ${row.repo} ${row.revision}`.toLowerCase().includes(needle))
-      .slice(0, 100);
+    return model.rows.filter((row) => `${row.uid} ${row.hotkey} ${row.repo} ${row.revision}`.toLowerCase().includes(needle));
   }, [model.rows, query]);
 
   useEffect(() => {

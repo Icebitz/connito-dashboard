@@ -1,5 +1,5 @@
-import { AlertTriangle, BarChart3, Search, ShieldCheck, X } from "lucide-react";
-import { Fragment } from "react";
+import { AlertTriangle, BarChart3, ChevronLeft, ChevronRight, Maximize2, Minimize2, Search, ShieldCheck, X } from "lucide-react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent } from "react";
 
 import { LEADERBOARD_COLUMN_COUNT, VALIDATOR_COLUMNS } from "../constants";
@@ -7,6 +7,8 @@ import { formatInteger, formatMetricNumber, formatNumber, formatPercent, getHotk
 import { getMinerKey } from "../model";
 import type { DashboardModel, MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
 import { SectionTitle } from "./section-title";
+
+const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 
 type LeaderboardSectionProps = {
   filteredRows: MinerRow[];
@@ -29,19 +31,72 @@ export function LeaderboardSection({
   onQueryChange,
   onToggleMinerDetails
 }: LeaderboardSectionProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(25);
+  const [fullscreen, setFullscreen] = useState(false);
+  const totalRows = filteredRows.length;
+  const pageCount = Math.max(1, Math.ceil(totalRows / pageSize));
+  const safeCurrentPage = Math.min(currentPage, pageCount);
+  const pageStart = (safeCurrentPage - 1) * pageSize;
+  const pageRows = useMemo(() => filteredRows.slice(pageStart, pageStart + pageSize), [filteredRows, pageSize, pageStart]);
+  const visibleStart = totalRows ? pageStart + 1 : 0;
+  const visibleEnd = Math.min(pageStart + pageSize, totalRows);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, pageCount));
+  }, [pageCount]);
+
+  useEffect(() => {
+    if (!fullscreen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setFullscreen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [fullscreen]);
+
   return (
-    <section className="leaderboard-section">
+    <section className={`leaderboard-section${fullscreen ? " leaderboard-section-fullscreen" : ""}`}>
       <div className="leaderboard-header">
         <SectionTitle eyebrow="Leaderboard" title="Top Miners" />
-        <label className="search-field">
-          <Search size={15} />
-          <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search UID, hotkey, repo" />
-          {query ? (
-            <button type="button" onClick={() => onQueryChange("")} title="Clear search">
-              <X size={14} />
-            </button>
-          ) : null}
-        </label>
+        <div className="leaderboard-actions">
+          <label className="search-field">
+            <Search size={15} />
+            <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search UID, hotkey, repo" />
+            {query ? (
+              <button type="button" onClick={() => onQueryChange("")} title="Clear search">
+                <X size={14} />
+              </button>
+            ) : null}
+          </label>
+          <button
+            type="button"
+            className="table-icon-button"
+            aria-label={fullscreen ? "Exit fullscreen leaderboard" : "Open fullscreen leaderboard"}
+            aria-pressed={fullscreen}
+            title={fullscreen ? "Exit fullscreen" : "Fullscreen table"}
+            onClick={() => setFullscreen((current) => !current)}
+          >
+            {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
+        </div>
       </div>
 
       <LeaderboardSummaryStrip topMiner={topMiner} burnPercent={burnPercent} meta={meta} />
@@ -62,7 +117,7 @@ export function LeaderboardSection({
             </tr>
           </thead>
           <tbody>
-            {filteredRows.map((row) => (
+            {pageRows.map((row) => (
               <LeaderboardRow
                 key={getMinerKey(row)}
                 row={row}
@@ -71,13 +126,50 @@ export function LeaderboardSection({
                 onToggleMinerDetails={onToggleMinerDetails}
               />
             ))}
-            {!filteredRows.length ? (
+            {!totalRows ? (
               <tr>
                 <td colSpan={LEADERBOARD_COLUMN_COUNT}>No miners match the current search.</td>
               </tr>
             ) : null}
           </tbody>
         </table>
+      </div>
+
+      <div className="table-footer" aria-label="Leaderboard pagination">
+        <span>
+          Showing {visibleStart}-{visibleEnd} of {totalRows}
+        </span>
+        <div className="pagination-controls">
+          <label className="page-size-field">
+            <span>Rows</span>
+            <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])}>
+              {PAGE_SIZE_OPTIONS.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="pagination-button"
+            disabled={safeCurrentPage <= 1}
+            aria-label="Previous leaderboard page"
+            title="Previous page"
+            onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <strong>{safeCurrentPage} / {pageCount}</strong>
+          <button
+            type="button"
+            className="pagination-button"
+            disabled={safeCurrentPage >= pageCount}
+            aria-label="Next leaderboard page"
+            title="Next page"
+            onClick={() => setCurrentPage(Math.min(pageCount, safeCurrentPage + 1))}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
       </div>
     </section>
   );

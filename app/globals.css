@@ -1415,6 +1415,12 @@ h1 {
   stroke-width: 3;
 }
 
+.chart-dot {
+  fill: var(--cyan);
+  stroke: var(--chart-dot-stroke);
+  stroke-width: 2;
+}
+
 .chart-tick {
   stroke: var(--line-strong);
 }

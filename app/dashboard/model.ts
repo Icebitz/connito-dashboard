@@ -1,5 +1,5 @@
 import { LEADERBOARD_SOURCE } from "./constants";
-import type { ApiResponse, DashboardModel, HistoryPoint, MinerRow, UpcomingPhase, ValidatorMetric } from "./types";
+import type { ApiResponse, DashboardModel, HistoryPoint, MinerRow, UpcomingPhase, ValidatorHealth, ValidatorMetric } from "./types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -58,6 +58,12 @@ function asTextArray(value: unknown) {
     : [];
 }
 
+function asNumberArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.map(asNumber).filter((item): item is number => item !== null)
+    : [];
+}
+
 function averageNumbers(values: Array<number | null | undefined>) {
   const numbers = values.filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
   return numbers.length ? numbers.reduce((sum, value) => sum + value, 0) / numbers.length : null;
@@ -69,6 +75,10 @@ function unwrapDashboardData(payload: unknown) {
   }
 
   return isRecord(payload) ? payload : {};
+}
+
+function getDashboardMeta(payload: unknown) {
+  return isRecord(payload) && isRecord(payload.meta) ? payload.meta : null;
 }
 
 export function getMinerKey(row: Pick<MinerRow, "uid" | "hotkey" | "repo" | "revision">) {
@@ -143,6 +153,21 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
   });
 }
 
+function getValidatorHealth(meta: Record<string, unknown> | null): ValidatorHealth[] {
+  const health = Array.isArray(meta?.validator_health) ? meta.validator_health.filter(isRecord) : [];
+
+  return health
+    .map((validator) => ({
+      slot: asNumber(validator.validator_slot) ?? asNumber(validator.slot),
+      status: asText(validator.validator_status) ?? asText(validator.status),
+      chainActive: asBoolean(validator.chain_active),
+      promReachable: asBoolean(validator.prom_reachable),
+      lastChainUpdateBlock: asNumber(validator.last_chain_update_block),
+      lastPromSampleAgeSeconds: asNumber(validator.last_prom_sample_age_seconds)
+    }))
+    .sort((a, b) => (a.slot ?? Number.MAX_SAFE_INTEGER) - (b.slot ?? Number.MAX_SAFE_INTEGER));
+}
+
 function getLeaderboardRows(data: Record<string, unknown>): MinerRow[] {
   const records = Array.isArray(data.leaderboard) ? data.leaderboard.filter(isRecord) : [];
 
@@ -170,17 +195,48 @@ function getLeaderboardRows(data: Record<string, unknown>): MinerRow[] {
       };
     })
     .sort((a, b) => {
-      const weightDelta = (b.weight ?? Number.NEGATIVE_INFINITY) - (a.weight ?? Number.NEGATIVE_INFINITY);
+      const weightDelta = compareNullableNumbers(a.weight, b.weight, "desc");
       if (weightDelta !== 0) {
         return weightDelta;
       }
 
-      return (b.score ?? Number.NEGATIVE_INFINITY) - (a.score ?? Number.NEGATIVE_INFINITY);
+      const lossDelta = compareNullableNumbers(a.loss, b.loss, "asc");
+      if (lossDelta !== 0) {
+        return lossDelta;
+      }
+
+      const deltaLossDelta = compareNullableNumbers(a.deltaLoss, b.deltaLoss, "desc");
+      if (deltaLossDelta !== 0) {
+        return deltaLossDelta;
+      }
+
+      const scoreDelta = compareNullableNumbers(a.score, b.score, "desc");
+      if (scoreDelta !== 0) {
+        return scoreDelta;
+      }
+
+      return compareNullableNumbers(asNumber(a.uid), asNumber(b.uid), "asc");
     })
     .map((row, index) => ({
       ...row,
       rank: index + 1
     }));
+}
+
+function compareNullableNumbers(a: number | null, b: number | null, direction: "asc" | "desc") {
+  if (a === null && b === null) {
+    return 0;
+  }
+
+  if (a === null) {
+    return 1;
+  }
+
+  if (b === null) {
+    return -1;
+  }
+
+  return direction === "asc" ? a - b : b - a;
 }
 
 function getBurnPercent(burnWeight: number | null | undefined, totalWeight: number | null | undefined) {
@@ -288,6 +344,7 @@ function getProgress(into: number | null, remaining: number | null, start: numbe
 
 export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardModel {
   const data = unwrapDashboardData(leaderboard?.data);
+  const meta = getDashboardMeta(leaderboard?.data);
   const subnet = isRecord(data.subnet) ? data.subnet : null;
   const phase = isRecord(data.phase) ? data.phase : null;
   const round = isRecord(data.round) ? data.round : null;
@@ -320,18 +377,21 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
     : headBlock !== null && phaseStart !== null ? headBlock - phaseStart : null;
   const upcomingPhases = getUpcomingPhases(phase, headBlock);
   const scores = rows.map((row) => row.score).filter((value): value is number => value !== null);
+  const losses = rows.map((row) => row.loss).filter((value): value is number => value !== null);
   const weights = rows.map((row) => row.weight).filter((value): value is number => value !== null);
   const assigned = rows.filter((row) => row.assigned === true).length;
+  const metaStale = asBoolean(meta?.stale) ?? false;
+  const validatorHealth = getValidatorHealth(meta);
 
   return {
     source: typeof leaderboard?.source === "string" ? leaderboard.source : LEADERBOARD_SOURCE,
     fetchedAt: leaderboard?.fetchedAt ?? null,
-    stale: Boolean(leaderboard?.stale),
+    stale: Boolean(leaderboard?.stale) || metaStale,
     empty: Boolean(leaderboard?.empty),
     subnet: {
       netuid: asNumber(subnet?.netuid) ?? 102,
       miners: asNumber(subnet?.total_miners) ?? rows.length,
-      validators: asNumber(subnet?.validator_count)
+      validators: asNumber(subnet?.validator_count) ?? asNumber(meta?.validator_count)
     },
     phase: {
       name: phaseName,
@@ -362,9 +422,21 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
       assigned,
       topScore: scores.length ? Math.max(...scores) : null,
       averageScore: scores.length ? scores.reduce((sum, value) => sum + value, 0) / scores.length : null,
+      bestLoss: losses.length ? Math.min(...losses) : null,
+      averageLoss: losses.length ? losses.reduce((sum, value) => sum + value, 0) / losses.length : null,
       topWeight: weights.length ? Math.max(...weights) : null,
       totalWeight: weights.length ? weights.reduce((sum, value) => sum + value, 0) : null,
       burnPercent: getBurnPercent(burnRow?.weight, totalWeightIncludingBurn || null)
+    },
+    meta: {
+      validatorCount: asNumber(meta?.validator_count) ?? asNumber(subnet?.validator_count),
+      polledValidatorCount: asNumber(meta?.polled_validator_count),
+      stale: metaStale,
+      staleReason: asText(meta?.stale_reason),
+      servedFrom: asText(meta?.served_from),
+      contributingValidators: asNumberArray(meta?.contributing_validators),
+      chainActiveValidators: asNumberArray(meta?.chain_active_validators),
+      validatorHealth
     },
     rows
   };

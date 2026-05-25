@@ -43,6 +43,15 @@ export type ValidatorMetric = {
   failureReasons: string[];
 };
 
+export type ValidatorHealth = {
+  slot: number | null;
+  status: string | null;
+  chainActive: boolean | null;
+  promReachable: boolean | null;
+  lastChainUpdateBlock: number | null;
+  lastPromSampleAgeSeconds: number | null;
+};
+
 export type HistoryPoint = {
   round: number;
   value: number;
@@ -60,7 +69,7 @@ export type UpcomingPhase = {
 
 export type Theme = "dark" | "light";
 
-export type DashboardStatus = "Degraded" | "Waiting" | "Cached" | "Live";
+export type DashboardStatus = "Degraded" | "Waiting" | "Cached" | "Partial" | "Live";
 
 export type DashboardModel = {
   source: string;
@@ -101,9 +110,21 @@ export type DashboardModel = {
     assigned: number;
     topScore: number | null;
     averageScore: number | null;
+    bestLoss: number | null;
+    averageLoss: number | null;
     topWeight: number | null;
     totalWeight: number | null;
     burnPercent: number | null;
+  };
+  meta: {
+    validatorCount: number | null;
+    polledValidatorCount: number | null;
+    stale: boolean;
+    staleReason: string | null;
+    servedFrom: string | null;
+    contributingValidators: number[];
+    chainActiveValidators: number[];
+    validatorHealth: ValidatorHealth[];
   };
   rows: MinerRow[];
 };

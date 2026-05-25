@@ -101,12 +101,18 @@ export default function Leaderboard() {
   const scoredPercent = model.round.roster && model.round.roster > 0
     ? Math.max(0, Math.min(100, ((model.round.scored ?? 0) / model.round.roster) * 100))
     : 0;
-  const status: DashboardStatus = error ? "Degraded" : model.empty ? "Waiting" : model.stale ? "Cached" : "Live";
+  const status: DashboardStatus = error
+    ? "Degraded"
+    : model.empty ? "Waiting"
+      : leaderboard?.stale ? "Cached"
+        : model.meta.stale ? "Partial"
+          : "Live";
   const fetchedAtMs = model.fetchedAt ? new Date(model.fetchedAt).getTime() : Number.NaN;
   const hasSyncedAt = Number.isFinite(fetchedAtMs);
   const lastSync = hasSyncedAt ? new Date(fetchedAtMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
   const syncCounter = hasSyncedAt ? `${formatDuration(nowMs - fetchedAtMs)} ago` : "-";
   const topMiner = model.rows[0];
+  const firstLoad = loading && leaderboard === null;
 
   return (
     <main className="dashboard-shell">
@@ -121,11 +127,11 @@ export default function Leaderboard() {
       />
 
       <Notice message={error} />
-      <OverviewGrid model={model} syncCounter={syncCounter} />
-      <PhasePanels phase={model.phase} loadingUpcoming={loading && leaderboard === null} />
+      <OverviewGrid model={model} syncCounter={syncCounter} loading={firstLoad} />
+      <PhasePanels phase={model.phase} loading={firstLoad} loadingUpcoming={firstLoad} />
       <section className="round-row" aria-label="Round loss and health">
-        <RoundTrendSection points={model.round.history} />
-        <RoundHealthPanel round={model.round} scoredPercent={scoredPercent} />
+        <RoundTrendSection points={model.round.history} loading={firstLoad} />
+        <RoundHealthPanel round={model.round} scoredPercent={scoredPercent} loading={firstLoad} />
       </section>
       <MetricChartsSection rows={model.rows} />
       <LeaderboardSection
@@ -134,6 +140,7 @@ export default function Leaderboard() {
         selectedMinerKey={selectedMinerKey}
         topMiner={topMiner}
         burnPercent={model.metrics.burnPercent}
+        meta={model.meta}
         onQueryChange={setQuery}
         onToggleMinerDetails={toggleMinerDetails}
       />

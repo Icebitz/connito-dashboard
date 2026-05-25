@@ -1,11 +1,11 @@
-import { BarChart3, Search, X } from "lucide-react";
+import { AlertTriangle, BarChart3, Search, ShieldCheck, X } from "lucide-react";
 import { Fragment } from "react";
 import type { KeyboardEvent } from "react";
 
 import { LEADERBOARD_COLUMN_COUNT, VALIDATOR_COLUMNS } from "../constants";
 import { formatInteger, formatMetricNumber, formatNumber, formatPercent, getHotkeyUrl, getHuggingFaceRepoUrl, shortText } from "../format";
 import { getMinerKey } from "../model";
-import type { MinerRow } from "../types";
+import type { DashboardModel, MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
 import { SectionTitle } from "./section-title";
 
 type LeaderboardSectionProps = {
@@ -14,6 +14,7 @@ type LeaderboardSectionProps = {
   selectedMinerKey: string | null;
   topMiner: MinerRow | undefined;
   burnPercent: number | null;
+  meta: DashboardModel["meta"];
   onQueryChange: (value: string) => void;
   onToggleMinerDetails: (row: MinerRow) => void;
 };
@@ -24,6 +25,7 @@ export function LeaderboardSection({
   selectedMinerKey,
   topMiner,
   burnPercent,
+  meta,
   onQueryChange,
   onToggleMinerDetails
 }: LeaderboardSectionProps) {
@@ -42,7 +44,7 @@ export function LeaderboardSection({
         </label>
       </div>
 
-      <TopMinerStrip topMiner={topMiner} burnPercent={burnPercent} />
+      <LeaderboardSummaryStrip topMiner={topMiner} burnPercent={burnPercent} meta={meta} />
 
       <div className="table-frame">
         <table>
@@ -50,26 +52,13 @@ export function LeaderboardSection({
             <tr>
               <th className="rank-column">#</th>
               <th className="uid-column">UID</th>
-              <th className="hotkey-column">Hotkey</th>
-              <th className="repo-column">Repository</th>
+              <th className="miner-column">Miner</th>
               <th className="revision-column">Revision</th>
               <th className="weight-column">Weight</th>
               <th className="loss-column">Loss</th>
               <th className="delta-loss-column">Delta</th>
               <th className="assigned-column">Assigned</th>
-              {VALIDATOR_COLUMNS.map((index) => (
-                <Fragment key={`validator-heading-${index}`}>
-                  <th className={`validator-metric-heading validator-${index + 1}-column`} title={`Validator ${index + 1} evaluation status`}>
-                    V{index + 1} Eval
-                  </th>
-                  <th className={`validator-metric-heading validator-${index + 1}-column`} title={`Validator ${index + 1} val loss`}>
-                    V{index + 1} Loss
-                  </th>
-                  <th className={`validator-metric-heading validator-${index + 1}-column`} title={`Validator ${index + 1} average score`}>
-                    V{index + 1} Score
-                  </th>
-                </Fragment>
-              ))}
+              <th className="validator-grid-column">Validators</th>
             </tr>
           </thead>
           <tbody>
@@ -77,6 +66,7 @@ export function LeaderboardSection({
               <LeaderboardRow
                 key={getMinerKey(row)}
                 row={row}
+                validatorHealth={meta.validatorHealth}
                 selected={selectedMinerKey === getMinerKey(row)}
                 onToggleMinerDetails={onToggleMinerDetails}
               />
@@ -93,39 +83,78 @@ export function LeaderboardSection({
   );
 }
 
-type TopMinerStripProps = {
+type LeaderboardSummaryStripProps = {
   topMiner: MinerRow | undefined;
   burnPercent: number | null;
+  meta: DashboardModel["meta"];
 };
 
-function TopMinerStrip({ topMiner, burnPercent }: TopMinerStripProps) {
+function LeaderboardSummaryStrip({ topMiner, burnPercent, meta }: LeaderboardSummaryStripProps) {
   const topMinerHotkeyUrl = topMiner ? getHotkeyUrl(topMiner.hotkey) : null;
   const topMinerRepoUrl = topMiner ? getHuggingFaceRepoUrl(topMiner.repo) : null;
+  const liveValidators = meta.validatorHealth.length
+    ? meta.validatorHealth.filter((validator) => getValidatorTone(validator) === "live").length
+    : meta.polledValidatorCount ?? 0;
+  const validatorTotal = meta.validatorCount ?? meta.validatorHealth.length;
+  const validatorLabel = validatorTotal ? `${liveValidators}/${validatorTotal}` : "-";
 
   return (
-    <div className="top-miner-strip">
-      <div className="top-miner-info">
+    <div className="leaderboard-summary-strip">
+      <div className="leaderboard-summary-card leaderboard-summary-primary">
         <BarChart3 size={17} />
-        <span>Top Chain Weight</span>
-        <em>{topMiner ? `${formatNumber(topMiner.weight, 6)}` : "-"}</em>
-        <strong>
-          {topMiner && topMinerHotkeyUrl ? (
-            <a className="table-link" href={topMinerHotkeyUrl} target="_blank" rel="noreferrer">
-              UID {topMiner.uid}
-            </a>
-          ) : topMiner ? `UID ${topMiner.uid}` : "-"}
-        </strong>
-        <small>
-          {topMiner && topMinerRepoUrl ? (
-            <a className="table-link" href={topMinerRepoUrl} target="_blank" rel="noreferrer">
-              {shortText(topMiner.repo, 22, 0)}
-            </a>
-          ) : topMiner ? shortText(topMiner.repo, 22, 0) : "-"}
-        </small>
+        <div>
+          <span>Top Chain Weight</span>
+          <strong>{topMiner ? `${formatNumber(topMiner.weight, 6)}` : "-"}</strong>
+        </div>
+        <div className="summary-miner-target">
+          <em>
+            {topMiner && topMinerHotkeyUrl ? (
+              <a className="table-link" href={topMinerHotkeyUrl} target="_blank" rel="noreferrer">
+                UID {topMiner.uid}
+              </a>
+            ) : topMiner ? `UID ${topMiner.uid}` : "-"}
+          </em>
+          <small>
+            {topMiner && topMinerRepoUrl ? (
+              <a className="table-link" href={topMinerRepoUrl} target="_blank" rel="noreferrer">
+                {shortText(topMiner.repo, 24, 0)}
+              </a>
+            ) : topMiner ? shortText(topMiner.repo, 24, 0) : "-"}
+          </small>
+        </div>
       </div>
-      <div className="burn-info">
+
+      <div className="leaderboard-summary-card leaderboard-summary-compact">
         <span>Burn</span>
-        <em>{formatPercent(burnPercent, 2)}</em>
+        <strong>{formatPercent(burnPercent, 2)}</strong>
+      </div>
+
+      <div className="leaderboard-summary-card validator-health-summary">
+        <ShieldCheck size={17} />
+        <div>
+          <span>Validators</span>
+          <strong>{validatorLabel} live</strong>
+        </div>
+        <div className="validator-health-chips" aria-label="Validator slot health">
+          {VALIDATOR_COLUMNS.map((index) => {
+            const health = getValidatorHealthForSlot(meta.validatorHealth, index);
+            const tone = getValidatorTone(health);
+
+            return (
+              <span className={`validator-health-chip validator-health-${tone}`} key={`validator-health-${index}`} title={`Validator ${index + 1}: ${formatValidatorStatus(health?.status)}`}>
+                V{index + 1}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className={`leaderboard-summary-card source-summary${meta.stale ? " source-summary-stale" : ""}`}>
+        {meta.stale ? <AlertTriangle size={17} /> : <ShieldCheck size={17} />}
+        <div>
+          <span>{meta.servedFrom ?? "API"}</span>
+          <strong>{meta.staleReason ? formatValidatorStatus(meta.staleReason) : "Current"}</strong>
+        </div>
       </div>
     </div>
   );
@@ -133,11 +162,12 @@ function TopMinerStrip({ topMiner, burnPercent }: TopMinerStripProps) {
 
 type LeaderboardRowProps = {
   row: MinerRow;
+  validatorHealth: ValidatorHealth[];
   selected: boolean;
   onToggleMinerDetails: (row: MinerRow) => void;
 };
 
-function LeaderboardRow({ row, selected, onToggleMinerDetails }: LeaderboardRowProps) {
+function LeaderboardRow({ row, validatorHealth, selected, onToggleMinerDetails }: LeaderboardRowProps) {
   const hotkeyUrl = getHotkeyUrl(row.hotkey);
   const repoUrl = getHuggingFaceRepoUrl(row.repo);
   const rowKey = getMinerKey(row);
@@ -164,60 +194,62 @@ function LeaderboardRow({ row, selected, onToggleMinerDetails }: LeaderboardRowP
         tabIndex={0}
         aria-expanded={selected}
         aria-controls={detailsId}
-        title="Click for validator score and loss details"
+        title="Click for validator weight and loss details"
         onClick={() => onToggleMinerDetails(row)}
         onKeyDown={handleKeyDown}
       >
         <td className="rank-column">{row.rank}</td>
         <td className="uid-column">{row.uid}</td>
-        <td className="hotkey-column" title={row.hotkey}>
-          {hotkeyUrl ? (
-            <a className="table-link" href={hotkeyUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-              {shortText(row.hotkey, 8, 6)}
-            </a>
-          ) : shortText(row.hotkey, 8, 6)}
-        </td>
-        <td className="repo-column" title={row.repo}>
-          {repoUrl ? (
-            <a className="table-link" href={repoUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-              {shortText(row.repo, 24, 0)}
-            </a>
-          ) : shortText(row.repo, 24, 0)}
+        <td className="miner-column" title={`${row.hotkey} ${row.repo}`}>
+          <div className="miner-cell">
+            <strong>
+              {hotkeyUrl ? (
+                <a className="table-link" href={hotkeyUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
+                  {shortText(row.hotkey, 8, 6)}
+                </a>
+              ) : shortText(row.hotkey, 8, 6)}
+            </strong>
+            <span>
+              {repoUrl ? (
+                <a className="table-link" href={repoUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
+                  {shortText(row.repo, 30, 0)}
+                </a>
+              ) : shortText(row.repo, 30, 0)}
+            </span>
+          </div>
         </td>
         <td className="revision-column" title={row.revision}>{shortText(row.revision, 10, 0)}</td>
         <td className="weight-column">{rowWeight}</td>
         <td className="loss-column">{rowLoss}</td>
         <td className="delta-loss-column">{rowDeltaLoss}</td>
-        <td className="assigned-column">{row.assigned === null ? "-" : row.assigned ? "Yes" : "No"}</td>
-        {VALIDATOR_COLUMNS.map((index) => {
-          const metric = getValidatorMetricForColumn(row, index);
-          const score = formatMetricNumber(metric?.score, 4);
-          const valLoss = formatMetricNumber(metric?.valLoss, 4);
-          const evalStatus = formatEvalStatus(metric?.evalStatusLabel);
+        <td className="assigned-column">
+          <span className={`assignment-pill assignment-${row.assigned === null ? "unknown" : row.assigned ? "yes" : "no"}`}>
+            {row.assigned === null ? "-" : row.assigned ? "Yes" : "No"}
+          </span>
+        </td>
+        <td className="validator-grid-column">
+          <div className="validator-mini-grid" aria-label={`Validator metrics for UID ${row.uid}`}>
+            {VALIDATOR_COLUMNS.map((index) => {
+              const metric = getValidatorMetricForColumn(row, index);
+              const health = getValidatorHealthForSlot(validatorHealth, index);
+              const tone = getValidatorTone(health, metric);
+              const valLoss = formatMetricNumber(metric?.valLoss, 4);
+              const weight = formatMetricNumber(metric?.weightSubmitted, 4);
 
-          return (
-            <Fragment key={`${rowKey}-validator-${index}`}>
-              <td
-                className={`validator-metric-cell validator-status-cell validator-${index + 1}-column`}
-                title={metric ? `${metric.label} eval ${metric.evalStatusLabel ?? "-"}${metric.failureReasons.length ? ` (${metric.failureReasons.join(", ")})` : ""}` : undefined}
-              >
-                {evalStatus}
-              </td>
-              <td
-                className={`validator-metric-cell validator-${index + 1}-column`}
-                title={metric ? `${metric.label} val loss ${valLoss}` : undefined}
-              >
-                {valLoss}
-              </td>
-              <td
-                className={`validator-metric-cell validator-${index + 1}-column`}
-                title={metric ? `${metric.label} score ${score}` : undefined}
-              >
-                {score}
-              </td>
-            </Fragment>
-          );
-        })}
+              return (
+                <span
+                  className={`validator-mini-card validator-mini-${tone}`}
+                  key={`${rowKey}-validator-${index}`}
+                  title={metric ? `${metric.label}: loss ${valLoss}, weight ${weight}` : `Validator ${index + 1}: ${formatValidatorStatus(health?.status)}`}
+                >
+                  <em>V{index + 1}</em>
+                  <strong>{valLoss}</strong>
+                  <small>{weight}</small>
+                </span>
+              );
+            })}
+          </div>
+        </td>
       </tr>
       {selected ? (
         <tr className="leaderboard-details-row" id={detailsId}>
@@ -233,6 +265,28 @@ function LeaderboardRow({ row, selected, onToggleMinerDetails }: LeaderboardRowP
 function getValidatorMetricForColumn(row: MinerRow, index: number) {
   const hasSlots = row.validatorMetrics.some((metric) => metric.slot !== null);
   return hasSlots ? row.validatorMetrics.find((metric) => metric.slot === index + 1) : row.validatorMetrics[index];
+}
+
+function getValidatorHealthForSlot(validatorHealth: ValidatorHealth[], index: number) {
+  return validatorHealth.find((validator) => validator.slot === index + 1);
+}
+
+function getValidatorTone(health: ValidatorHealth | undefined, metric?: ValidatorMetric) {
+  const status = health?.status?.toLowerCase() ?? null;
+
+  if (status === "live" && health?.chainActive !== false && health?.promReachable !== false) {
+    return metric && metric.valLoss === null && metric.weightSubmitted === null ? "partial" : "live";
+  }
+
+  if (status === "down" || health?.chainActive === false || health?.promReachable === false) {
+    return "down";
+  }
+
+  return metric ? "partial" : "missing";
+}
+
+function formatValidatorStatus(status: string | null | undefined) {
+  return status ? status.replace(/_/g, " ") : "missing";
 }
 
 function formatEvalStatus(status: string | null | undefined) {
@@ -257,8 +311,8 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
           <strong title={row.revision}>{shortText(row.revision, 10, 0)}</strong>
         </div>
         <div className="miner-summary-item miner-summary-important">
-          <span>Score</span>
-          <strong>{formatMetricNumber(row.score, 4)}</strong>
+          <span>Reports</span>
+          <strong>{formatInteger(row.validatorMetrics.length)}</strong>
         </div>
         <div className="miner-summary-item miner-summary-important">
           <span>Val Loss</span>
@@ -305,11 +359,11 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
               <th>Label</th>
               <th>Slot</th>
               <th>Status</th>
-              <th>Eval</th>
-              <th>Score</th>
+              <th>Chain UID</th>
               <th>Val Loss</th>
               <th>Weight</th>
-              <th>Samples</th>
+              <th>Block</th>
+              <th>Eval</th>
             </tr>
           </thead>
           <tbody>
@@ -319,11 +373,11 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
                   <td>{metric.label}</td>
                   <td>{formatInteger(metric.slot)}</td>
                   <td>{metric.validatorStatus ?? "-"}</td>
-                  <td title={metric.failureReasons.length ? metric.failureReasons.join(", ") : undefined}>{formatEvalStatus(metric.evalStatusLabel)}</td>
-                  <td>{formatMetricNumber(metric.score, 4)}</td>
+                  <td>{formatInteger(metric.chainUid)}</td>
                   <td title={metric.valLoss === null ? undefined : String(metric.valLoss)}>{formatMetricNumber(metric.valLoss, 6)}</td>
                   <td>{formatMetricNumber(metric.weightSubmitted, 4)}</td>
-                  <td>{formatInteger(metric.scoreSamples)}</td>
+                  <td>{formatInteger(metric.extractedAtBlock)}</td>
+                  <td title={metric.failureReasons.length ? metric.failureReasons.join(", ") : undefined}>{formatEvalStatus(metric.evalStatusLabel)}</td>
                 </tr>
               ))
             ) : (

@@ -10,6 +10,47 @@ type MiniLineChartProps = {
   points: HistoryPoint[];
 };
 
+type ChartPoint = {
+  x: number;
+  y: number;
+};
+
+function buildSmoothPath(chartPoints: ChartPoint[]) {
+  if (chartPoints.length === 0) {
+    return "";
+  }
+
+  if (chartPoints.length === 1) {
+    const point = chartPoints[0];
+    return `M ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+  }
+
+  const controlPoint = (current: ChartPoint, previous: ChartPoint, next: ChartPoint, reverse = false) => {
+    const smoothing = 0.18;
+    const length = Math.hypot(next.x - previous.x, next.y - previous.y) * smoothing;
+    const angle = Math.atan2(next.y - previous.y, next.x - previous.x) + (reverse ? Math.PI : 0);
+
+    return {
+      x: current.x + Math.cos(angle) * length,
+      y: current.y + Math.sin(angle) * length
+    };
+  };
+
+  return chartPoints.reduce((path, point, index, array) => {
+    if (index === 0) {
+      return `M ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+    }
+
+    const previous = array[index - 1];
+    const previousPrevious = array[index - 2] ?? previous;
+    const next = array[index + 1] ?? point;
+    const startControl = controlPoint(previous, previousPrevious, point);
+    const endControl = controlPoint(point, previous, next, true);
+
+    return `${path} C ${startControl.x.toFixed(2)} ${startControl.y.toFixed(2)}, ${endControl.x.toFixed(2)} ${endControl.y.toFixed(2)}, ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+  }, "");
+}
+
 export function MiniLineChart({ points }: MiniLineChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -64,7 +105,8 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
   const graphHeight = height - padTop - padBottom;
   const xFor = (index: number) => padX + graphWidth * (index / Math.max(1, points.length - 1));
   const yFor = (value: number) => padTop + ((max - value) / range) * graphHeight;
-  const line = points.map((point, index) => `${index === 0 ? "M" : "L"} ${xFor(index).toFixed(2)} ${yFor(point.value).toFixed(2)}`).join(" ");
+  const chartPoints = points.map((point, index) => ({ x: xFor(index), y: yFor(point.value) }));
+  const line = buildSmoothPath(chartPoints);
   const area = `${line} L ${xFor(points.length - 1).toFixed(2)} ${height - padBottom} L ${xFor(0).toFixed(2)} ${height - padBottom} Z`;
   const ticks = [0, Math.floor((points.length - 1) / 2), points.length - 1].filter((value, index, array) => array.indexOf(value) === index);
   const latest = points[points.length - 1];
@@ -97,6 +139,16 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
       >
         <path className="chart-area" d={area} />
         <path className="chart-line" d={line} />
+        {chartPoints.map((point, index) => (
+          <circle
+            aria-hidden="true"
+            className="chart-dot"
+            cx={point.x}
+            cy={point.y}
+            key={`${points[index].round}-${index}`}
+            r="3.25"
+          />
+        ))}
         {hoverIndex !== null ? (
           <>
             <line className="chart-hover-line" x1={hoveredX} x2={hoveredX} y1={padTop} y2={height - padBottom} />

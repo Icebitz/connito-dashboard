@@ -1663,8 +1663,8 @@ table {
 
 .table-frame > table {
   width: 100%;
-  min-width: 1120px;
-  table-layout: fixed;
+  min-width: 1220px;
+  table-layout: auto;
 }
 
 thead th {
@@ -1693,37 +1693,50 @@ thead th {
   text-align: right;
 }
 
+.rank-column,
+.uid-column,
+.revision-column,
+.weight-column,
+.loss-column,
+.delta-loss-column,
+.assigned-column {
+  width: 1%;
+}
+
 .rank-column {
-  width: 52px;
+  min-width: 52px;
 }
 
 .uid-column {
-  width: 72px;
+  min-width: 72px;
 }
 
 .miner-column {
-  width: 250px;
+  width: 190px;
+  min-width: 180px;
+  max-width: 190px;
 }
 
 .revision-column {
-  width: 94px;
+  min-width: 94px;
 }
 
 .weight-column {
-  width: 104px;
+  min-width: 104px;
 }
 
 .loss-column,
 .delta-loss-column {
-  width: 104px;
+  min-width: 104px;
 }
 
 .assigned-column {
-  width: 86px;
+  min-width: 86px;
 }
 
 .validator-grid-column {
-  width: 356px;
+  width: 420px;
+  min-width: 420px;
 }
 
 tbody td {
@@ -2343,7 +2356,7 @@ tbody tr:last-child td {
   }
 
   .table-frame > table {
-    min-width: 1080px;
+    min-width: 1220px;
   }
 
   .chart-box svg,

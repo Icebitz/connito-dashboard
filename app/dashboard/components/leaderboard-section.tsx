@@ -9,6 +9,8 @@ import type { DashboardModel, MinerRow, ValidatorHealth, ValidatorMetric } from 
 import { SectionTitle } from "./section-title";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+const NO_CHAIN_COMMIT_STATUS = "no_chain_commit";
+const OK_STATUS = "ok";
 
 type LeaderboardSectionProps = {
   filteredRows: MinerRow[];
@@ -264,6 +266,7 @@ function LeaderboardRow({ row, validatorHealth, selected, onToggleMinerDetails }
   const repoUrl = getHuggingFaceRepoUrl(row.repo);
   const rowKey = getMinerKey(row);
   const detailsId = `miner-details-${row.rank}-${row.uid}`;
+  const rowMetricClassName = getRowMetricClassName(row);
   const rowWeight = formatMetricNumber(row.weight, 4);
   const rowLoss = formatMetricNumber(row.loss, 4);
   const rowDeltaLoss = formatMetricNumber(row.deltaLoss, 4);
@@ -312,7 +315,7 @@ function LeaderboardRow({ row, validatorHealth, selected, onToggleMinerDetails }
         </td>
         <td className="revision-column" title={row.revision}>{shortText(row.revision, 10, 0)}</td>
         <td className="weight-column">{rowWeight}</td>
-        <td className="loss-column">{rowLoss}</td>
+        <td className={`loss-column${rowMetricClassName ? ` ${rowMetricClassName}` : ""}`}>{rowLoss}</td>
         <td className="delta-loss-column">{rowDeltaLoss}</td>
         <td className="assigned-column">
           <span className={`assignment-pill assignment-${row.assigned === null ? "unknown" : row.assigned ? "yes" : "no"}`}>
@@ -325,6 +328,7 @@ function LeaderboardRow({ row, validatorHealth, selected, onToggleMinerDetails }
               const metric = getValidatorMetricForColumn(row, index);
               const health = getValidatorHealthForSlot(validatorHealth, index);
               const tone = getValidatorTone(health, metric);
+              const metricClassName = getMetricClassName(metric?.evalStatusLabel);
               const valLoss = formatMetricNumber(metric?.valLoss, 4);
               const weight = formatMetricNumber(metric?.weightSubmitted, 4);
 
@@ -335,7 +339,7 @@ function LeaderboardRow({ row, validatorHealth, selected, onToggleMinerDetails }
                   title={metric ? `${metric.label}: loss ${valLoss}, weight ${weight}` : `Validator ${index + 1}: ${formatValidatorStatus(health?.status)}`}
                 >
                   <em>V{index + 1}</em>
-                  <strong>{valLoss}</strong>
+                  <strong className={metricClassName}>{valLoss}</strong>
                   <small>{weight}</small>
                 </span>
               );
@@ -391,9 +395,46 @@ function formatEvalStatus(status: string | null | undefined) {
     .replace(/_/g, " ");
 }
 
+function isNoChainCommitStatus(status: string | null | undefined) {
+  return status?.trim().toLowerCase() === NO_CHAIN_COMMIT_STATUS;
+}
+
+function isOkStatus(status: string | null | undefined) {
+  return status?.trim().toLowerCase() === OK_STATUS;
+}
+
+function getMetricClassName(status: string | null | undefined) {
+  if (isNoChainCommitStatus(status)) {
+    return "no-chain-commit-metric";
+  }
+
+  if (isOkStatus(status)) {
+    return "ok-eval-metric";
+  }
+
+  return undefined;
+}
+
+function getRowMetricClassName(row: MinerRow) {
+  if (!row.validatorMetrics.length) {
+    return undefined;
+  }
+
+  if (row.validatorMetrics.every((metric) => isNoChainCommitStatus(metric.evalStatusLabel))) {
+    return "no-chain-commit-metric";
+  }
+
+  if (row.validatorMetrics.every((metric) => isOkStatus(metric.evalStatusLabel))) {
+    return "ok-eval-metric";
+  }
+
+  return undefined;
+}
+
 function MinerValidatorDetails({ row }: { row: MinerRow }) {
   const hotkeyUrl = getHotkeyUrl(row.hotkey);
   const repoUrl = getHuggingFaceRepoUrl(row.repo);
+  const rowMetricClassName = getRowMetricClassName(row);
 
   return (
     <div className="miner-details">
@@ -408,7 +449,7 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
         </div>
         <div className="miner-summary-item miner-summary-important">
           <span>Val Loss</span>
-          <strong>{formatMetricNumber(row.loss, 6)}</strong>
+          <strong className={rowMetricClassName}>{formatMetricNumber(row.loss, 6)}</strong>
         </div>
         <div className="miner-summary-item miner-summary-important">
           <span>Weight</span>
@@ -453,6 +494,7 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
               <th>Status</th>
               <th>Chain UID</th>
               <th>Val Loss</th>
+              <th>Score</th>
               <th>Weight</th>
               <th>Block</th>
               <th>Eval</th>
@@ -466,7 +508,8 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
                   <td>{formatInteger(metric.slot)}</td>
                   <td>{metric.validatorStatus ?? "-"}</td>
                   <td>{formatInteger(metric.chainUid)}</td>
-                  <td title={metric.valLoss === null ? undefined : String(metric.valLoss)}>{formatMetricNumber(metric.valLoss, 6)}</td>
+                  <td className={getMetricClassName(metric.evalStatusLabel)} title={metric.valLoss === null ? undefined : String(metric.valLoss)}>{formatMetricNumber(metric.valLoss, 6)}</td>
+                  <td className={getMetricClassName(metric.evalStatusLabel)} title={metric.score === null ? undefined : String(metric.score)}>{formatMetricNumber(metric.score, 6)}</td>
                   <td>{formatMetricNumber(metric.weightSubmitted, 4)}</td>
                   <td>{formatInteger(metric.extractedAtBlock)}</td>
                   <td title={metric.failureReasons.length ? metric.failureReasons.join(", ") : undefined}>{formatEvalStatus(metric.evalStatusLabel)}</td>
@@ -474,7 +517,7 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
               ))
             ) : (
               <tr>
-                <td colSpan={8}>No validator metrics reported for this miner.</td>
+                <td colSpan={9}>No validator metrics reported for this miner.</td>
               </tr>
             )}
           </tbody>

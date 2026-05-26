@@ -2062,6 +2062,14 @@ tbody .assigned-column {
   text-align: right;
 }
 
+.no-chain-commit-metric {
+  color: var(--amber) !important;
+}
+
+.ok-eval-metric {
+  color: var(--green) !important;
+}
+
 .validator-metric-heading,
 .validator-metric-cell {
   min-width: 84px;
@@ -2194,7 +2202,7 @@ tbody td.leaderboard-details-cell {
 
 .validator-detail-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 840px;
   table-layout: fixed;
   font-size: var(--font-xs);
 }
@@ -2210,7 +2218,8 @@ tbody td.leaderboard-details-cell {
 .validator-detail-table thead th:nth-child(4),
 .validator-detail-table thead th:nth-child(5),
 .validator-detail-table thead th:nth-child(6),
-.validator-detail-table thead th:nth-child(7) {
+.validator-detail-table thead th:nth-child(7),
+.validator-detail-table thead th:nth-child(8) {
   text-align: right;
 }
 
@@ -2223,8 +2232,8 @@ tbody td.leaderboard-details-cell {
 }
 
 .validator-detail-table tbody td:nth-child(5),
-.validator-detail-table tbody td:nth-child(6) {
-  color: var(--green);
+.validator-detail-table tbody td:nth-child(6),
+.validator-detail-table tbody td:nth-child(7) {
   font-size: var(--font-sm);
   font-weight: 800;
 }
@@ -2233,7 +2242,8 @@ tbody td.leaderboard-details-cell {
 .validator-detail-table tbody td:nth-child(4),
 .validator-detail-table tbody td:nth-child(5),
 .validator-detail-table tbody td:nth-child(6),
-.validator-detail-table tbody td:nth-child(7) {
+.validator-detail-table tbody td:nth-child(7),
+.validator-detail-table tbody td:nth-child(8) {
   text-align: right;
 }
 

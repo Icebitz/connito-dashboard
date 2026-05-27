@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardHeader } from "./dashboard/components/dashboard-header";
 import { LeaderboardSection } from "./dashboard/components/leaderboard-section";
 import { MetricChartsSection } from "./dashboard/components/metric-charts-section";
-import { Notice } from "./dashboard/components/notice";
 import { OverviewGrid } from "./dashboard/components/overview-grid";
 import { PhasePanels, RoundHealthPanel } from "./dashboard/components/phase-panels";
 import { RoundTrendSection } from "./dashboard/components/round-trend-section";
@@ -124,7 +123,6 @@ export default function Leaderboard() {
         onThemeToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")}
       />
 
-      <Notice message={error} />
       <OverviewGrid model={model} syncCounter={syncCounter} loading={firstLoad} />
       <PhasePanels phase={model.phase} loading={firstLoad} loadingUpcoming={firstLoad} />
       <section className="round-row" aria-label="Round loss and health">
@@ -138,8 +136,11 @@ export default function Leaderboard() {
         selectedMinerKey={selectedMinerKey}
         topMiner={topMiner}
         burnPercent={model.metrics.burnPercent}
+        phase={model.phase}
+        theme={theme}
         meta={model.meta}
         onQueryChange={setQuery}
+        onThemeToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")}
         onToggleMinerDetails={toggleMinerDetails}
       />
       <footer className="site-footer">

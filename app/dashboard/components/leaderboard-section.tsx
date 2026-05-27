@@ -3,7 +3,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent } from "react";
 
 import { LEADERBOARD_COLUMN_COUNT, VALIDATOR_COLUMNS } from "../constants";
-import { formatInteger, formatMetricNumber, formatNumber, formatPercent, getHotkeyUrl, getHuggingFaceRepoUrl, shortText } from "../format";
+import { formatInteger, formatMetricNumber, formatNumber, formatPercent, formatRepoRevision, getHotkeyUrl, getHuggingFaceRepoUrl, getHuggingFaceRevisionUrl, shortText } from "../format";
 import { getMinerKey } from "../model";
 import type { DashboardModel, MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
 import { SectionTitle } from "./section-title";
@@ -110,7 +110,6 @@ export function LeaderboardSection({
               <th className="rank-column">#</th>
               <th className="uid-column">UID</th>
               <th className="miner-column">Miner</th>
-              <th className="revision-column">Revision</th>
               <th className="weight-column">Weight</th>
               <th className="loss-column">Loss</th>
               <th className="delta-loss-column">Delta</th>
@@ -144,7 +143,7 @@ export function LeaderboardSection({
         <div className="pagination-controls">
           <label className="page-size-field">
             <span>Rows</span>
-            <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])}>
+            <select aria-label="Rows per page" value={pageSize} onChange={(event) => setPageSize(Number(event.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])}>
               {PAGE_SIZE_OPTIONS.map((option) => (
                 <option key={option} value={option}>{option}</option>
               ))}
@@ -263,7 +262,8 @@ type LeaderboardRowProps = {
 
 function LeaderboardRow({ row, validatorHealth, selected, onToggleMinerDetails }: LeaderboardRowProps) {
   const hotkeyUrl = getHotkeyUrl(row.hotkey);
-  const repoUrl = getHuggingFaceRepoUrl(row.repo);
+  const repoRevisionUrl = getHuggingFaceRevisionUrl(row.repo, row.revision);
+  const repoRevisionLabel = formatRepoRevision(row.repo, row.revision);
   const rowKey = getMinerKey(row);
   const detailsId = `miner-details-${row.rank}-${row.uid}`;
   const rowMetricClassName = getRowMetricClassName(row);
@@ -293,9 +293,9 @@ function LeaderboardRow({ row, validatorHealth, selected, onToggleMinerDetails }
         onClick={() => onToggleMinerDetails(row)}
         onKeyDown={handleKeyDown}
       >
-        <td className="rank-column">{row.rank}</td>
-        <td className="uid-column">{row.uid}</td>
-        <td className="miner-column" title={`${row.hotkey} ${row.repo}`}>
+        <td className="rank-column" data-label="#">{row.rank}</td>
+        <td className="uid-column" data-label="UID">{row.uid}</td>
+        <td className="miner-column" data-label="Miner" title={`${row.hotkey} ${repoRevisionLabel}`}>
           <div className="miner-cell">
             <strong>
               {hotkeyUrl ? (
@@ -305,24 +305,23 @@ function LeaderboardRow({ row, validatorHealth, selected, onToggleMinerDetails }
               ) : shortText(row.hotkey, 8, 6)}
             </strong>
             <span>
-              {repoUrl ? (
-                <a className="table-link" href={repoUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-                  {shortText(row.repo, 30, 0)}
+              {repoRevisionUrl ? (
+                <a className="table-link" href={repoRevisionUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
+                  {shortText(repoRevisionLabel, 30, 0)}
                 </a>
-              ) : shortText(row.repo, 30, 0)}
+              ) : shortText(repoRevisionLabel, 30, 0)}
             </span>
           </div>
         </td>
-        <td className="revision-column" title={row.revision}>{shortText(row.revision, 10, 0)}</td>
-        <td className="weight-column">{rowWeight}</td>
-        <td className={`loss-column${rowMetricClassName ? ` ${rowMetricClassName}` : ""}`}>{rowLoss}</td>
-        <td className="delta-loss-column">{rowDeltaLoss}</td>
-        <td className="assigned-column">
+        <td className="weight-column" data-label="Weight">{rowWeight}</td>
+        <td className={`loss-column${rowMetricClassName ? ` ${rowMetricClassName}` : ""}`} data-label="Loss">{rowLoss}</td>
+        <td className="delta-loss-column" data-label="Delta">{rowDeltaLoss}</td>
+        <td className="assigned-column" data-label="Assigned">
           <span className={`assignment-pill assignment-${row.assigned === null ? "unknown" : row.assigned ? "yes" : "no"}`}>
             {row.assigned === null ? "-" : row.assigned ? "Yes" : "No"}
           </span>
         </td>
-        <td className="validator-grid-column">
+        <td className="validator-grid-column" data-label="Validators">
           <div className="validator-mini-grid" aria-label={`Validator metrics for UID ${row.uid}`}>
             {VALIDATOR_COLUMNS.map((index) => {
               const metric = getValidatorMetricForColumn(row, index);
@@ -434,6 +433,8 @@ function getRowMetricClassName(row: MinerRow) {
 function MinerValidatorDetails({ row }: { row: MinerRow }) {
   const hotkeyUrl = getHotkeyUrl(row.hotkey);
   const repoUrl = getHuggingFaceRepoUrl(row.repo);
+  const repoRevisionUrl = getHuggingFaceRevisionUrl(row.repo, row.revision);
+  const repoRevisionLabel = formatRepoRevision(row.repo, row.revision);
   const rowMetricClassName = getRowMetricClassName(row);
 
   return (
@@ -441,7 +442,13 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
       <div className="miner-summary-grid">
         <div className="miner-summary-item">
           <span>Revision</span>
-          <strong title={row.revision}>{shortText(row.revision, 10, 0)}</strong>
+          <strong title={repoRevisionLabel}>
+            {repoRevisionUrl ? (
+              <a className="table-link" href={repoRevisionUrl} target="_blank" rel="noreferrer">
+                {shortText(repoRevisionLabel, 24, 0)}
+              </a>
+            ) : shortText(repoRevisionLabel, 24, 0)}
+          </strong>
         </div>
         <div className="miner-summary-item miner-summary-important">
           <span>Reports</span>

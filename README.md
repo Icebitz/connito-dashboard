@@ -131,7 +131,7 @@ The v2 API includes validator-specific metrics such as:
 
 ## Development Notes
 
-- The dashboard refreshes leaderboard data every 60 seconds.
+- The dashboard refreshes leaderboard data every 12 seconds.
 - The local sync counter updates every second.
 - The frontend fetches `/api/leaderboard` with `cache: "no-store"`.
 - If the upstream request fails, the API route returns cached data when available and marks the response as stale.

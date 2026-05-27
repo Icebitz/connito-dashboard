@@ -124,8 +124,33 @@ export function shortText(value: string, start = 8, end = 6) {
   return `${value.slice(0, start)}...${end > 0 ? value.slice(-end) : ""}`;
 }
 
+export function formatRepoRevision(repo: string, revision: string) {
+  const hasRepo = Boolean(repo && repo !== "-");
+  const hasRevision = Boolean(revision && revision !== "-");
+
+  if (hasRepo && hasRevision) {
+    return `${repo}:${revision}`;
+  }
+
+  if (hasRepo) {
+    return repo;
+  }
+
+  return hasRevision ? revision : "-";
+}
+
 export function getHuggingFaceRepoUrl(repo: string) {
   return repo && repo !== "-" ? `https://huggingface.co/${repo.split("/").map(encodeURIComponent).join("/")}` : null;
+}
+
+export function getHuggingFaceRevisionUrl(repo: string, revision: string) {
+  const repoUrl = getHuggingFaceRepoUrl(repo);
+
+  if (!repoUrl || !revision || revision === "-") {
+    return repoUrl;
+  }
+
+  return `${repoUrl}/tree/${encodeURIComponent(revision)}`;
 }
 
 export function getHotkeyUrl(hotkey: string) {

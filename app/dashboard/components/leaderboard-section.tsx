@@ -2,7 +2,7 @@ import { AlertTriangle, BarChart3, ChevronLeft, ChevronRight, Eye, EyeOff, Maxim
 import { Fragment, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
-import { LEADERBOARD_COLUMN_COUNT, VALIDATOR_COLUMNS } from "../constants";
+import { LEADERBOARD_COLUMN_COUNT, LEADERBOARD_VIEW_UIDS_STORAGE_KEY, VALIDATOR_COLUMNS } from "../constants";
 import { formatBlockDuration, formatInteger, formatMetricNumber, formatNumber, formatPercent, formatRepoRevision, getHotkeyUrl, getHuggingFaceRepoUrl, getHuggingFaceRevisionUrl, shortText } from "../format";
 import { getMinerKey } from "../model";
 import type { DashboardModel, MinerRow, Theme, ValidatorHealth, ValidatorMetric } from "../types";
@@ -12,6 +12,14 @@ const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 const NO_CHAIN_COMMIT_STATUS = "no_chain_commit";
 const OK_STATUS = "ok";
 const EMPTY_METRIC_VALUE = "-";
+
+function normalizeStoredUids(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return Array.from(new Set(value.map((uid) => String(uid).trim()).filter(Boolean)));
+}
 
 type LeaderboardSectionProps = {
   allRows: MinerRow[];
@@ -45,17 +53,17 @@ export function LeaderboardSection({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(25);
   const [fullscreen, setFullscreen] = useState(false);
-  const [viewListKeys, setViewListKeys] = useState<string[]>([]);
+  const [viewListUids, setViewListUids] = useState<string[]>([]);
+  const [viewListHydrated, setViewListHydrated] = useState(false);
   const [showViewListOnly, setShowViewListOnly] = useState(false);
-  const allRowKeys = useMemo(() => new Set(allRows.map((row) => getMinerKey(row))), [allRows]);
-  const viewListRows = useMemo(() => {
-    const rowsByKey = new Map(allRows.map((row) => [getMinerKey(row), row]));
-    return viewListKeys.map((key) => rowsByKey.get(key)).filter((row): row is MinerRow => Boolean(row));
-  }, [allRows, viewListKeys]);
-  const viewListKeySet = useMemo(() => new Set(viewListKeys), [viewListKeys]);
+  const viewListItems = useMemo(() => {
+    const rowsByUid = new Map(allRows.map((row) => [row.uid, row]));
+    return viewListUids.map((uid) => ({ uid, row: rowsByUid.get(uid) }));
+  }, [allRows, viewListUids]);
+  const viewListUidSet = useMemo(() => new Set(viewListUids), [viewListUids]);
   const displayedRows = useMemo(
-    () => showViewListOnly ? filteredRows.filter((row) => viewListKeySet.has(getMinerKey(row))) : filteredRows,
-    [filteredRows, showViewListOnly, viewListKeySet]
+    () => showViewListOnly ? filteredRows.filter((row) => viewListUidSet.has(row.uid)) : filteredRows,
+    [filteredRows, showViewListOnly, viewListUidSet]
   );
   const totalRows = displayedRows.length;
   const pageCount = Math.max(1, Math.ceil(totalRows / pageSize));
@@ -75,14 +83,34 @@ export function LeaderboardSection({
   }, [pageCount]);
 
   useEffect(() => {
-    setViewListKeys((keys) => keys.filter((key) => allRowKeys.has(key)));
-  }, [allRowKeys]);
+    try {
+      const stored = window.localStorage.getItem(LEADERBOARD_VIEW_UIDS_STORAGE_KEY);
+      const parsed = stored ? JSON.parse(stored) : [];
+      setViewListUids(normalizeStoredUids(parsed));
+    } catch {
+      setViewListUids([]);
+    } finally {
+      setViewListHydrated(true);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!viewListKeys.length) {
+    if (!viewListHydrated) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(LEADERBOARD_VIEW_UIDS_STORAGE_KEY, JSON.stringify(viewListUids));
+    } catch {
+      // Persisting the view list is best-effort; the in-memory selection still works.
+    }
+  }, [viewListHydrated, viewListUids]);
+
+  useEffect(() => {
+    if (!viewListUids.length) {
       setShowViewListOnly(false);
     }
-  }, [viewListKeys.length]);
+  }, [viewListUids.length]);
 
   useEffect(() => {
     if (!fullscreen) {
@@ -107,13 +135,11 @@ export function LeaderboardSection({
   }, [fullscreen]);
 
   const toggleViewListMiner = (row: MinerRow) => {
-    const rowKey = getMinerKey(row);
-    setViewListKeys((keys) => keys.includes(rowKey) ? keys.filter((key) => key !== rowKey) : [...keys, rowKey]);
+    setViewListUids((uids) => uids.includes(row.uid) ? uids.filter((uid) => uid !== row.uid) : [...uids, row.uid]);
   };
 
-  const removeViewListMiner = (row: MinerRow) => {
-    const rowKey = getMinerKey(row);
-    setViewListKeys((keys) => keys.filter((key) => key !== rowKey));
+  const removeViewListMiner = (uid: string) => {
+    setViewListUids((uids) => uids.filter((selectedUid) => selectedUid !== uid));
   };
 
   return (
@@ -126,12 +152,12 @@ export function LeaderboardSection({
             <div className="leaderboard-search-toolbar">
               <div className="search-field search-token-field">
                 <Search size={15} />
-                <SelectedUidTokens rows={viewListRows} onRemove={removeViewListMiner} />
+                <SelectedUidTokens items={viewListItems} onRemove={removeViewListMiner} />
                 <input
                   aria-label="Search miners by UID, hotkey, or repo"
                   value={query}
                   onChange={(event) => onQueryChange(event.target.value)}
-                  placeholder={viewListRows.length ? "Search" : "Search UID, hotkey, repo"}
+                  placeholder={viewListUids.length ? "Search" : "Search UID, hotkey, repo"}
                 />
                 {query ? (
                   <button type="button" onClick={() => onQueryChange("")} title="Clear search">
@@ -144,7 +170,7 @@ export function LeaderboardSection({
                 className={`view-list-filter-button${showViewListOnly ? " view-list-filter-button-active" : ""}`}
                 aria-label={showViewListOnly ? "Show all miners" : "Show only selected miners"}
                 aria-pressed={showViewListOnly}
-                disabled={!viewListRows.length}
+                disabled={!viewListUids.length}
                 title={showViewListOnly ? "Show all miners" : "Show only selected miners"}
                 onClick={() => setShowViewListOnly((current) => !current)}
               >
@@ -200,7 +226,7 @@ export function LeaderboardSection({
                 row={row}
                 validatorHealth={meta.validatorHealth}
                 selected={selectedMinerKey === getMinerKey(row)}
-                monitored={viewListKeySet.has(getMinerKey(row))}
+                monitored={viewListUidSet.has(row.uid)}
                 onToggleViewList={toggleViewListMiner}
                 onToggleMinerDetails={onToggleMinerDetails}
               />
@@ -254,26 +280,31 @@ export function LeaderboardSection({
   );
 }
 
-type SelectedUidTokensProps = {
-  rows: MinerRow[];
-  onRemove: (row: MinerRow) => void;
+type SelectedUidTokenItem = {
+  uid: string;
+  row: MinerRow | undefined;
 };
 
-function SelectedUidTokens({ rows, onRemove }: SelectedUidTokensProps) {
-  if (!rows.length) {
+type SelectedUidTokensProps = {
+  items: SelectedUidTokenItem[];
+  onRemove: (uid: string) => void;
+};
+
+function SelectedUidTokens({ items, onRemove }: SelectedUidTokensProps) {
+  if (!items.length) {
     return null;
   }
 
   return (
     <div className="selected-uid-token-list" aria-label="Selected miner UIDs">
-      {rows.map((row) => (
-        <span className="miner-view-chip" key={getMinerKey(row)} title={`${row.hotkey} ${formatRepoRevision(row.repo, row.revision)}`}>
-          UID {row.uid}
+      {items.map(({ uid, row }) => (
+        <span className="miner-view-chip" key={uid} title={row ? `${row.hotkey} ${formatRepoRevision(row.repo, row.revision)}` : `UID ${uid}`}>
+          UID {uid}
           <button
             type="button"
-            aria-label={`Remove UID ${row.uid} from view list`}
-            title={`Remove UID ${row.uid}`}
-            onClick={() => onRemove(row)}
+            aria-label={`Remove UID ${uid} from view list`}
+            title={`Remove UID ${uid}`}
+            onClick={() => onRemove(uid)}
           >
             <X size={12} />
           </button>

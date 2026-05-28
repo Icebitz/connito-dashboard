@@ -149,7 +149,6 @@ export function LeaderboardSection({
                 onClick={() => setShowViewListOnly((current) => !current)}
               >
                 {showViewListOnly ? <EyeOff size={13} /> : <Eye size={13} />}
-                <span>{showViewListOnly ? "All" : "Selected"}</span>
               </button>
             </div>
           </div>

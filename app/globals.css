@@ -1649,14 +1649,14 @@ h1 {
 }
 
 .view-list-filter-button {
-  min-width: 86px;
+  width: 34px;
+  min-width: 34px;
   min-height: 34px;
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 0 9px;
+  padding: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--panel-raised);

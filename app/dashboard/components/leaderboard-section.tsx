@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, ChevronLeft, ChevronRight, Maximize2, Minimize2, Moon, Search, ShieldCheck, Sun, X } from "lucide-react";
+import { AlertTriangle, BarChart3, ChevronLeft, ChevronRight, Eye, EyeOff, Maximize2, Minimize2, Moon, Search, ShieldCheck, Sun, X } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
@@ -14,6 +14,7 @@ const OK_STATUS = "ok";
 const EMPTY_METRIC_VALUE = "-";
 
 type LeaderboardSectionProps = {
+  allRows: MinerRow[];
   filteredRows: MinerRow[];
   query: string;
   selectedMinerKey: string | null;
@@ -28,6 +29,7 @@ type LeaderboardSectionProps = {
 };
 
 export function LeaderboardSection({
+  allRows,
   filteredRows,
   query,
   selectedMinerKey,
@@ -43,21 +45,44 @@ export function LeaderboardSection({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(25);
   const [fullscreen, setFullscreen] = useState(false);
-  const totalRows = filteredRows.length;
+  const [viewListKeys, setViewListKeys] = useState<string[]>([]);
+  const [showViewListOnly, setShowViewListOnly] = useState(false);
+  const allRowKeys = useMemo(() => new Set(allRows.map((row) => getMinerKey(row))), [allRows]);
+  const viewListRows = useMemo(() => {
+    const rowsByKey = new Map(allRows.map((row) => [getMinerKey(row), row]));
+    return viewListKeys.map((key) => rowsByKey.get(key)).filter((row): row is MinerRow => Boolean(row));
+  }, [allRows, viewListKeys]);
+  const viewListKeySet = useMemo(() => new Set(viewListKeys), [viewListKeys]);
+  const displayedRows = useMemo(
+    () => showViewListOnly ? filteredRows.filter((row) => viewListKeySet.has(getMinerKey(row))) : filteredRows,
+    [filteredRows, showViewListOnly, viewListKeySet]
+  );
+  const totalRows = displayedRows.length;
   const pageCount = Math.max(1, Math.ceil(totalRows / pageSize));
   const safeCurrentPage = Math.min(currentPage, pageCount);
   const pageStart = (safeCurrentPage - 1) * pageSize;
-  const pageRows = useMemo(() => filteredRows.slice(pageStart, pageStart + pageSize), [filteredRows, pageSize, pageStart]);
+  const pageRows = useMemo(() => displayedRows.slice(pageStart, pageStart + pageSize), [displayedRows, pageSize, pageStart]);
   const visibleStart = totalRows ? pageStart + 1 : 0;
   const visibleEnd = Math.min(pageStart + pageSize, totalRows);
+  const emptyLeaderboardMessage = showViewListOnly ? "No selected miners match the current search." : "No miners match the current search.";
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, pageSize]);
+  }, [query, pageSize, showViewListOnly]);
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, pageCount));
   }, [pageCount]);
+
+  useEffect(() => {
+    setViewListKeys((keys) => keys.filter((key) => allRowKeys.has(key)));
+  }, [allRowKeys]);
+
+  useEffect(() => {
+    if (!viewListKeys.length) {
+      setShowViewListOnly(false);
+    }
+  }, [viewListKeys.length]);
 
   useEffect(() => {
     if (!fullscreen) {
@@ -81,21 +106,53 @@ export function LeaderboardSection({
     };
   }, [fullscreen]);
 
+  const toggleViewListMiner = (row: MinerRow) => {
+    const rowKey = getMinerKey(row);
+    setViewListKeys((keys) => keys.includes(rowKey) ? keys.filter((key) => key !== rowKey) : [...keys, rowKey]);
+  };
+
+  const removeViewListMiner = (row: MinerRow) => {
+    const rowKey = getMinerKey(row);
+    setViewListKeys((keys) => keys.filter((key) => key !== rowKey));
+  };
+
   return (
     <section className={`leaderboard-section${fullscreen ? " leaderboard-section-fullscreen" : ""}`}>
       <div className="leaderboard-header">
         <SectionTitle eyebrow="Leaderboard" title="Top Miners" />
         <FullscreenPhaseBar phase={phase} />
         <div className="leaderboard-actions">
-          <label className="search-field">
-            <Search size={15} />
-            <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search UID, hotkey, repo" />
-            {query ? (
-              <button type="button" onClick={() => onQueryChange("")} title="Clear search">
-                <X size={14} />
+          <div className="leaderboard-search-stack">
+            <div className="leaderboard-search-toolbar">
+              <div className="search-field search-token-field">
+                <Search size={15} />
+                <SelectedUidTokens rows={viewListRows} onRemove={removeViewListMiner} />
+                <input
+                  aria-label="Search miners by UID, hotkey, or repo"
+                  value={query}
+                  onChange={(event) => onQueryChange(event.target.value)}
+                  placeholder={viewListRows.length ? "Search" : "Search UID, hotkey, repo"}
+                />
+                {query ? (
+                  <button type="button" onClick={() => onQueryChange("")} title="Clear search">
+                    <X size={14} />
+                  </button>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                className={`view-list-filter-button${showViewListOnly ? " view-list-filter-button-active" : ""}`}
+                aria-label={showViewListOnly ? "Show all miners" : "Show only selected miners"}
+                aria-pressed={showViewListOnly}
+                disabled={!viewListRows.length}
+                title={showViewListOnly ? "Show all miners" : "Show only selected miners"}
+                onClick={() => setShowViewListOnly((current) => !current)}
+              >
+                {showViewListOnly ? <EyeOff size={13} /> : <Eye size={13} />}
+                <span>{showViewListOnly ? "All" : "Selected"}</span>
               </button>
-            ) : null}
-          </label>
+            </div>
+          </div>
           {fullscreen ? (
             <button
               type="button"
@@ -144,12 +201,14 @@ export function LeaderboardSection({
                 row={row}
                 validatorHealth={meta.validatorHealth}
                 selected={selectedMinerKey === getMinerKey(row)}
+                monitored={viewListKeySet.has(getMinerKey(row))}
+                onToggleViewList={toggleViewListMiner}
                 onToggleMinerDetails={onToggleMinerDetails}
               />
             ))}
             {!totalRows ? (
               <tr>
-                <td colSpan={LEADERBOARD_COLUMN_COUNT}>No miners match the current search.</td>
+                <td colSpan={LEADERBOARD_COLUMN_COUNT}>{emptyLeaderboardMessage}</td>
               </tr>
             ) : null}
           </tbody>
@@ -193,6 +252,35 @@ export function LeaderboardSection({
         </div>
       </div>
     </section>
+  );
+}
+
+type SelectedUidTokensProps = {
+  rows: MinerRow[];
+  onRemove: (row: MinerRow) => void;
+};
+
+function SelectedUidTokens({ rows, onRemove }: SelectedUidTokensProps) {
+  if (!rows.length) {
+    return null;
+  }
+
+  return (
+    <div className="selected-uid-token-list" aria-label="Selected miner UIDs">
+      {rows.map((row) => (
+        <span className="miner-view-chip" key={getMinerKey(row)} title={`${row.hotkey} ${formatRepoRevision(row.repo, row.revision)}`}>
+          UID {row.uid}
+          <button
+            type="button"
+            aria-label={`Remove UID ${row.uid} from view list`}
+            title={`Remove UID ${row.uid}`}
+            onClick={() => onRemove(row)}
+          >
+            <X size={12} />
+          </button>
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -299,10 +387,12 @@ type LeaderboardRowProps = {
   row: MinerRow;
   validatorHealth: ValidatorHealth[];
   selected: boolean;
+  monitored: boolean;
+  onToggleViewList: (row: MinerRow) => void;
   onToggleMinerDetails: (row: MinerRow) => void;
 };
 
-function LeaderboardRow({ row, validatorHealth, selected, onToggleMinerDetails }: LeaderboardRowProps) {
+function LeaderboardRow({ row, validatorHealth, selected, monitored, onToggleViewList, onToggleMinerDetails }: LeaderboardRowProps) {
   const hotkeyUrl = getHotkeyUrl(row.hotkey);
   const repoRevisionUrl = getHuggingFaceRevisionUrl(row.repo, row.revision);
   const repoRevisionLabel = formatRepoRevision(row.repo, row.revision);
@@ -327,7 +417,7 @@ function LeaderboardRow({ row, validatorHealth, selected, onToggleMinerDetails }
   return (
     <Fragment>
       <tr
-        className={`leaderboard-row${selected ? " leaderboard-row-selected" : ""}`}
+        className={`leaderboard-row${selected ? " leaderboard-row-selected" : ""}${monitored ? " leaderboard-row-monitored" : ""}`}
         tabIndex={0}
         aria-expanded={selected}
         aria-controls={detailsId}
@@ -337,6 +427,19 @@ function LeaderboardRow({ row, validatorHealth, selected, onToggleMinerDetails }
       >
         <td className="rank-column" data-label="Rank">
           <div className="rank-cell">
+            <button
+              type="button"
+              className={`monitor-row-button${monitored ? " monitor-row-button-active" : ""}`}
+              aria-label={`${monitored ? "Remove" : "Add"} UID ${row.uid} ${monitored ? "from" : "to"} view list`}
+              aria-pressed={monitored}
+              title={`${monitored ? "Remove from" : "Add to"} view list`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleViewList(row);
+              }}
+            >
+              {monitored ? <EyeOff size={13} /> : <Eye size={13} />}
+            </button>
             <button
               type="button"
               className="row-toggle-button"

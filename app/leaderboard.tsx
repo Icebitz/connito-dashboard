@@ -131,6 +131,7 @@ export default function Leaderboard() {
       </section>
       <MetricChartsSection rows={model.rows} />
       <LeaderboardSection
+        allRows={model.rows}
         filteredRows={filteredRows}
         query={query}
         selectedMinerKey={selectedMinerKey}

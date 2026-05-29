@@ -102,6 +102,7 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
         ?? asNumber(metric.latest_score);
       const scoreLatest = asNumber(metric.score_latest) ?? asNumber(metric.latest_score);
       const scoreAverage = asNumber(metric.score_avg) ?? asNumber(metric.avg_score) ?? asNumber(metric.score);
+      const extractedAtBlock = asNumber(metric.extracted_at_block) ?? asNumber(metric.block);
 
       return {
         label: asText(metric.validator_label) ?? asText(metric.label) ?? (slot === null ? `Validator ${index + 1}` : `val-${String(slot).padStart(2, "0")}`),
@@ -115,7 +116,7 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
         scoreSamples: asNumber(metric.score_samples),
         valLoss: asNumber(metric.val_loss) ?? asNumber(metric.validation_loss) ?? asNumber(metric.loss),
         weightSubmitted: asNumber(metric.weight_submitted) ?? asNumber(metric.weight),
-        extractedAtBlock: asNumber(metric.extracted_at_block) ?? asNumber(metric.block),
+        extractedAtBlock,
         validatorStatus: asText(metric.validator_status),
         evalStatusCode: asNumber(metric.eval_status_code),
         evalStatusLabel: asText(metric.eval_status_label),
@@ -349,6 +350,7 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
   const phase = isRecord(data.phase) ? data.phase : null;
   const round = isRecord(data.round) ? data.round : null;
   const roundStats = isRecord(round?.stats) ? round.stats : null;
+  const headBlock = asNumber(phase?.head_block);
   const allRows = getLeaderboardRows(data);
   const burnRow = allRows.find(isBurnRow) ?? null;
   const totalWeightIncludingBurn = allRows
@@ -363,7 +365,6 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
     }));
   const history = getRoundHistory(round);
   const phaseName = asText(phase?.name) ?? "-";
-  const headBlock = asNumber(phase?.head_block);
   const phaseStart = asNumber(phase?.started_at_block);
   const phaseEnd = asNumber(phase?.ends_at_block);
   const blocksInto = headBlock !== null && phaseStart !== null ? headBlock - phaseStart : null;

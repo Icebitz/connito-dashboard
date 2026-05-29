@@ -1325,7 +1325,7 @@ h1 {
 
 .metric-bar-row {
   display: grid;
-  grid-template-columns: 22px 72px minmax(120px, 1fr) 74px;
+  grid-template-columns: 22px 72px minmax(120px, 1fr) 88px;
   align-items: center;
   gap: 8px;
   min-height: 24px;
@@ -2649,7 +2649,7 @@ tbody td.leaderboard-details-cell {
 
 .validator-detail-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 840px;
   table-layout: fixed;
   font-size: var(--font-xs);
 }
@@ -2724,6 +2724,14 @@ tbody td.leaderboard-details-cell {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: var(--font-3xs);
   font-weight: 800;
+}
+
+.validator-block-number {
+  display: inline-block;
+  color: var(--heading);
+  font-size: var(--font-xs);
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .detail-status-badge,
@@ -3040,7 +3048,7 @@ tbody tr:last-child td {
   }
 
   .metric-bar-row {
-    grid-template-columns: 22px 64px minmax(86px, 1fr) 64px;
+    grid-template-columns: 22px 64px minmax(86px, 1fr) 82px;
     gap: 7px;
   }
 
@@ -3230,7 +3238,7 @@ tbody tr:last-child td {
   }
 
   .validator-detail-table {
-    min-width: 600px;
+    min-width: 720px;
   }
 
   .table-footer {

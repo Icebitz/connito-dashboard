@@ -323,10 +323,10 @@ function FullscreenPhaseBar({ phase }: { phase: DashboardModel["phase"] }) {
         <span>Current Phase</span>
         <strong>{phase.name}</strong>
       </div>
-      <div className="leaderboard-fullscreen-phase-progress" title={`${formatNumber(progress, 1)}%`}>
+      <div className="leaderboard-fullscreen-phase-progress" title={`${formatNumber(progress, 1)}% complete, ${formatBlockDuration(phase.blocksRemaining)} remaining`}>
         <div className="leaderboard-fullscreen-phase-meta">
           <span>{formatNumber(progress, 1)}%</span>
-          <small>{formatBlockDuration(phase.cycleBlock)} / {formatBlockDuration(phase.blocksRemaining)}</small>
+          <small>{formatBlockDuration(phase.blocksRemaining)} remaining</small>
         </div>
         <div className="leaderboard-fullscreen-progress-track">
           <i style={{ width: `${progress}%` }} />
@@ -357,7 +357,7 @@ function LeaderboardSummaryStrip({ topMiner, burnPercent, meta }: LeaderboardSum
         <BarChart3 size={17} />
         <div>
           <span>Top Chain Weight</span>
-          <strong>{topMiner ? formatLeaderboardMetricNumber(topMiner.weight, 6) : "-"}</strong>
+          <strong>{topMiner ? `${formatNumber(topMiner.weight, 6)}` : "-"}</strong>
         </div>
         <div className="summary-miner-target">
           <em>
@@ -429,7 +429,7 @@ function LeaderboardRow({ row, validatorHealth, selected, monitored, onToggleVie
   const rowKey = getMinerKey(row);
   const detailsId = `miner-details-${row.rank}-${row.uid}`;
   const rowScore = renderAggregateScoreMetric(row, 4);
-  const rowWeight = formatLeaderboardMetricNumber(row.weight, 6);
+  const rowWeight = formatLeaderboardMetricNumber(row.weight, 4);
   const rowLoss = formatLeaderboardMetricNumber(row.loss, 4);
   const rowDeltaLoss = formatLeaderboardMetricNumber(row.deltaLoss, 4);
 
@@ -524,9 +524,9 @@ function LeaderboardRow({ row, validatorHealth, selected, monitored, onToggleVie
               const metricClassName = getMetricClassName(metric?.evalStatusLabel);
               const isNoCommit = isNoChainCommitStatus(metric?.evalStatusLabel);
               const valLoss = renderMetricByEvalStatus(metric?.valLoss, metric?.evalStatusLabel, 4);
-              const weight = renderMetricByEvalStatus(metric?.weightSubmitted, metric?.evalStatusLabel, 6);
+              const weight = renderMetricByEvalStatus(metric?.weightSubmitted, metric?.evalStatusLabel, 4);
               const valLossTitle = formatMetricByEvalStatus(metric?.valLoss, metric?.evalStatusLabel, 4);
-              const weightTitle = formatMetricByEvalStatus(metric?.weightSubmitted, metric?.evalStatusLabel, 6);
+              const weightTitle = formatMetricByEvalStatus(metric?.weightSubmitted, metric?.evalStatusLabel, 4);
 
               return (
                 <span
@@ -783,7 +783,7 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
         <div className="miner-summary-item miner-summary-important miner-summary-priority">
           <span>Weight</span>
           <strong title={row.weight === null ? undefined : String(row.weight)}>
-            {formatLeaderboardMetricNumber(row.weight, 6)}
+            {formatLeaderboardMetricNumber(row.weight, 4)}
           </strong>
         </div>
       </div>
@@ -824,7 +824,7 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
                       </td>
                       <td className={getMetricClassName(metric.evalStatusLabel)} title={shouldDisplayEvalStatusAsMetric(metric.evalStatusLabel) ? formatShortEvalStatus(metric.evalStatusLabel) : metric.valLoss === null ? undefined : String(metric.valLoss)}>{renderMetricByEvalStatus(metric.valLoss, metric.evalStatusLabel, 6)}</td>
                       <td className={getMetricClassName(metric.evalStatusLabel)} title={formatMetricByEvalStatus(metric.score, metric.evalStatusLabel, 6)}>{renderMetricByEvalStatus(metric.score, metric.evalStatusLabel, 6)}</td>
-                      <td className={getMetricClassName(metric.evalStatusLabel)} title={shouldDisplayEvalStatusAsMetric(metric.evalStatusLabel) ? formatShortEvalStatus(metric.evalStatusLabel) : metric.weightSubmitted === null ? undefined : String(metric.weightSubmitted)}>{renderMetricByEvalStatus(metric.weightSubmitted, metric.evalStatusLabel, 6)}</td>
+                      <td className={getMetricClassName(metric.evalStatusLabel)} title={shouldDisplayEvalStatusAsMetric(metric.evalStatusLabel) ? formatShortEvalStatus(metric.evalStatusLabel) : metric.weightSubmitted === null ? undefined : String(metric.weightSubmitted)}>{renderMetricByEvalStatus(metric.weightSubmitted, metric.evalStatusLabel, 4)}</td>
                       <td>
                         <span className={`detail-status-badge ${getValidatorStatusClassName(metric.validatorStatus)}`}>
                           {formatValidatorStatus(metric.validatorStatus)}

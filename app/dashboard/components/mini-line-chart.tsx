@@ -94,20 +94,23 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
   }
 
   const { width, height } = chartSize;
-  const padX = 34;
+  const padLeft = 58;
+  const padRight = 28;
   const padTop = 18;
   const padBottom = 28;
   const values = points.map((point) => point.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const range = max - min || 1;
-  const graphWidth = width - padX * 2;
+  const rawRange = max - min;
+  const range = rawRange || 1;
+  const graphWidth = width - padLeft - padRight;
   const graphHeight = height - padTop - padBottom;
-  const xFor = (index: number) => padX + graphWidth * (index / Math.max(1, points.length - 1));
+  const xFor = (index: number) => padLeft + graphWidth * (index / Math.max(1, points.length - 1));
   const yFor = (value: number) => padTop + ((max - value) / range) * graphHeight;
   const chartPoints = points.map((point, index) => ({ x: xFor(index), y: yFor(point.value) }));
   const line = buildSmoothPath(chartPoints);
   const area = `${line} L ${xFor(points.length - 1).toFixed(2)} ${height - padBottom} L ${xFor(0).toFixed(2)} ${height - padBottom} Z`;
+  const valueTicks = rawRange === 0 ? [max] : [max, min + rawRange / 2, min];
   const ticks = [0, Math.floor((points.length - 1) / 2), points.length - 1].filter((value, index, array) => array.indexOf(value) === index);
   const latest = points[points.length - 1];
   const hovered = hoverIndex === null ? latest : points[hoverIndex];
@@ -119,7 +122,7 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
   const updateHover = (event: MouseEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const relativeX = ((event.clientX - rect.left) / rect.width) * width;
-    const index = Math.round(((relativeX - padX) / graphWidth) * (points.length - 1));
+    const index = Math.round(((relativeX - padLeft) / graphWidth) * (points.length - 1));
     setHoverIndex(Math.max(0, Math.min(points.length - 1, index)));
   };
 
@@ -137,6 +140,20 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
         onMouseLeave={() => setHoverIndex(null)}
         onMouseMove={updateHover}
       >
+        <g className="chart-value-grid" aria-hidden="true">
+          {valueTicks.map((value) => {
+            const y = yFor(value);
+
+            return (
+              <g key={value}>
+                <line x1={padLeft} x2={width - padRight} y1={y} y2={y} />
+                <text x={padLeft - 8} y={y} textAnchor="end" dominantBaseline="middle">
+                  {formatNumber(value, 3)}
+                </text>
+              </g>
+            );
+          })}
+        </g>
         <path className="chart-area" d={area} />
         <path className="chart-line" d={line} />
         {chartPoints.map((point, index) => (

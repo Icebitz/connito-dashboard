@@ -1412,13 +1412,13 @@ h1 {
   stroke: var(--blue);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 3;
+  stroke-width: 1.5;
 }
 
 .chart-dot {
-  fill: var(--cyan);
+  fill: var(--blue);
   stroke: var(--chart-dot-stroke);
-  stroke-width: 2;
+  stroke-width: 1.5;
 }
 
 .chart-tick {
@@ -1430,6 +1430,18 @@ h1 {
   font-size: var(--font-xs);
 }
 
+.chart-value-grid line {
+  stroke: var(--line);
+  stroke-width: 1;
+  opacity: 0.72;
+}
+
+.chart-value-grid text {
+  fill: var(--muted);
+  font-size: var(--font-3xs);
+  font-weight: 800;
+}
+
 .chart-hover-line {
   stroke: var(--chart-hover-line);
   stroke-dasharray: 4 4;
@@ -1437,9 +1449,9 @@ h1 {
 }
 
 .chart-hover-dot {
-  fill: var(--cyan);
+  fill: var(--blue);
   stroke: var(--chart-dot-stroke);
-  stroke-width: 3;
+  stroke-width: 2;
 }
 
 .chart-tooltip-svg rect {
@@ -1534,6 +1546,7 @@ h1 {
   overflow: hidden;
   text-align: right;
   text-overflow: ellipsis;
+  text-transform: none;
   white-space: nowrap;
 }
 

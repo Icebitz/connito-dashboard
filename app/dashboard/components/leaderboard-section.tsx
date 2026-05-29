@@ -3,7 +3,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
 import { LEADERBOARD_COLUMN_COUNT, LEADERBOARD_VIEW_UIDS_STORAGE_KEY, VALIDATOR_COLUMNS } from "../constants";
-import { formatBlockDuration, formatInteger, formatMetricNumber, formatNumber, formatPercent, formatRepoRevision, getHotkeyUrl, getHuggingFaceRepoUrl, getHuggingFaceRevisionUrl, shortText } from "../format";
+import { formatBlock, formatBlockDuration, formatInteger, formatMetricNumber, formatNumber, formatPercent, formatRepoRevision, getHotkeyUrl, getHuggingFaceRepoUrl, getHuggingFaceRevisionUrl, shortText } from "../format";
 import { getMinerKey } from "../model";
 import type { DashboardModel, MinerRow, Theme, ValidatorHealth, ValidatorMetric } from "../types";
 import { SectionTitle } from "./section-title";
@@ -357,7 +357,7 @@ function LeaderboardSummaryStrip({ topMiner, burnPercent, meta }: LeaderboardSum
         <BarChart3 size={17} />
         <div>
           <span>Top Chain Weight</span>
-          <strong>{topMiner ? `${formatNumber(topMiner.weight, 6)}` : "-"}</strong>
+          <strong>{topMiner ? formatLeaderboardMetricNumber(topMiner.weight, 6) : "-"}</strong>
         </div>
         <div className="summary-miner-target">
           <em>
@@ -429,7 +429,7 @@ function LeaderboardRow({ row, validatorHealth, selected, monitored, onToggleVie
   const rowKey = getMinerKey(row);
   const detailsId = `miner-details-${row.rank}-${row.uid}`;
   const rowScore = renderAggregateScoreMetric(row, 4);
-  const rowWeight = formatLeaderboardMetricNumber(row.weight, 4);
+  const rowWeight = formatLeaderboardMetricNumber(row.weight, 6);
   const rowLoss = formatLeaderboardMetricNumber(row.loss, 4);
   const rowDeltaLoss = formatLeaderboardMetricNumber(row.deltaLoss, 4);
 
@@ -524,9 +524,9 @@ function LeaderboardRow({ row, validatorHealth, selected, monitored, onToggleVie
               const metricClassName = getMetricClassName(metric?.evalStatusLabel);
               const isNoCommit = isNoChainCommitStatus(metric?.evalStatusLabel);
               const valLoss = renderMetricByEvalStatus(metric?.valLoss, metric?.evalStatusLabel, 4);
-              const weight = renderMetricByEvalStatus(metric?.weightSubmitted, metric?.evalStatusLabel, 4);
+              const weight = renderMetricByEvalStatus(metric?.weightSubmitted, metric?.evalStatusLabel, 6);
               const valLossTitle = formatMetricByEvalStatus(metric?.valLoss, metric?.evalStatusLabel, 4);
-              const weightTitle = formatMetricByEvalStatus(metric?.weightSubmitted, metric?.evalStatusLabel, 4);
+              const weightTitle = formatMetricByEvalStatus(metric?.weightSubmitted, metric?.evalStatusLabel, 6);
 
               return (
                 <span
@@ -658,6 +658,15 @@ function formatMetricByEvalStatus(value: number | null | undefined, status: stri
   return hasMetricValue(value) ? formatLeaderboardMetricNumber(value, digits) : formatMissingMetricStatus(status);
 }
 
+function formatValidatorBlock(metric: ValidatorMetric) {
+  return formatBlock(metric.extractedAtBlock);
+}
+
+function formatValidatorBlockTitle(metric: ValidatorMetric) {
+  const block = formatValidatorBlock(metric);
+  return block === "-" ? "No validator block reported" : `Validator data extracted at block ${block}`;
+}
+
 function renderMetricByEvalStatus(value: number | null | undefined, status: string | null | undefined, digits: number): ReactNode {
   return shouldDisplayEvalStatusAsMetric(status) || !hasMetricValue(value) ? <MetricStatusMarker status={status} /> : formatLeaderboardMetricNumber(value, digits);
 }
@@ -774,7 +783,7 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
         <div className="miner-summary-item miner-summary-important miner-summary-priority">
           <span>Weight</span>
           <strong title={row.weight === null ? undefined : String(row.weight)}>
-            {formatLeaderboardMetricNumber(row.weight, 4)}
+            {formatLeaderboardMetricNumber(row.weight, 6)}
           </strong>
         </div>
       </div>
@@ -791,6 +800,7 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
                 <th>Status</th>
                 <th>Chain UID</th>
                 <th>Eval</th>
+                <th>Block</th>
               </tr>
             </thead>
             <tbody>
@@ -814,7 +824,7 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
                       </td>
                       <td className={getMetricClassName(metric.evalStatusLabel)} title={shouldDisplayEvalStatusAsMetric(metric.evalStatusLabel) ? formatShortEvalStatus(metric.evalStatusLabel) : metric.valLoss === null ? undefined : String(metric.valLoss)}>{renderMetricByEvalStatus(metric.valLoss, metric.evalStatusLabel, 6)}</td>
                       <td className={getMetricClassName(metric.evalStatusLabel)} title={formatMetricByEvalStatus(metric.score, metric.evalStatusLabel, 6)}>{renderMetricByEvalStatus(metric.score, metric.evalStatusLabel, 6)}</td>
-                      <td className={getMetricClassName(metric.evalStatusLabel)} title={shouldDisplayEvalStatusAsMetric(metric.evalStatusLabel) ? formatShortEvalStatus(metric.evalStatusLabel) : metric.weightSubmitted === null ? undefined : String(metric.weightSubmitted)}>{renderMetricByEvalStatus(metric.weightSubmitted, metric.evalStatusLabel, 4)}</td>
+                      <td className={getMetricClassName(metric.evalStatusLabel)} title={shouldDisplayEvalStatusAsMetric(metric.evalStatusLabel) ? formatShortEvalStatus(metric.evalStatusLabel) : metric.weightSubmitted === null ? undefined : String(metric.weightSubmitted)}>{renderMetricByEvalStatus(metric.weightSubmitted, metric.evalStatusLabel, 6)}</td>
                       <td>
                         <span className={`detail-status-badge ${getValidatorStatusClassName(metric.validatorStatus)}`}>
                           {formatValidatorStatus(metric.validatorStatus)}
@@ -826,12 +836,15 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
                           {formatEvalStatus(metric.evalStatusLabel)}
                         </span>
                       </td>
+                      <td title={formatValidatorBlockTitle(metric)}>
+                        <span className="validator-block-number">{formatValidatorBlock(metric)}</span>
+                      </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={7}>No validator metrics reported for this miner.</td>
+                  <td colSpan={8}>No validator metrics reported for this miner.</td>
                 </tr>
               )}
             </tbody>

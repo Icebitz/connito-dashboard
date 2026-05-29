@@ -1,4 +1,4 @@
-import { formatMetricNumber, formatNumber } from "../format";
+import { formatNumber } from "../format";
 import type { MinerRow } from "../types";
 import { SectionTitle } from "./section-title";
 
@@ -24,7 +24,6 @@ function MetricBarChart({ title, label, rows, metric, digits, direction }: Metri
   const values = leaders.map((row) => row[metric] ?? 0);
   const min = values.length ? Math.min(...values) : 0;
   const max = values.length ? Math.max(...values) : 0;
-  const formatValue = (value: number) => metric === "weight" ? formatMetricNumber(value, digits) : formatNumber(value, digits);
 
   return (
     <article className="metric-chart-card">
@@ -39,13 +38,13 @@ function MetricBarChart({ title, label, rows, metric, digits, direction }: Metri
             const width = getBarWidth(value, min, max, direction);
 
             return (
-              <div className="metric-bar-row" key={`${metric}-${row.uid}-${row.hotkey}`} title={`UID ${row.uid} ${label.toLowerCase()} ${formatValue(value)}`}>
+              <div className="metric-bar-row" key={`${metric}-${row.uid}-${row.hotkey}`} title={`UID ${row.uid} ${label.toLowerCase()} ${formatNumber(value, digits)}`}>
                 <span>{index + 1}</span>
                 <strong>UID {row.uid}</strong>
                 <div className="metric-bar-track">
                   <i style={{ width: `${width}%` }} />
                 </div>
-                <em>{formatValue(value)}</em>
+                <em>{formatNumber(value, digits)}</em>
               </div>
             );
           })}
@@ -78,7 +77,7 @@ export function MetricChartsSection({ rows }: MetricChartsSectionProps) {
     <section className="metric-chart-section">
       <SectionTitle eyebrow="Leaderboard Metrics" title="Weights and Losses" />
       <div className="metric-chart-grid">
-        <MetricBarChart title="Top Weights" label="Weight" rows={rows} metric="weight" digits={6} direction="desc" />
+        <MetricBarChart title="Top Weights" label="Weight" rows={rows} metric="weight" digits={4} direction="desc" />
         <MetricBarChart title="Lowest Loss" label="Loss" rows={rows} metric="loss" digits={4} direction="asc" />
       </div>
     </section>

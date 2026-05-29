@@ -25,9 +25,9 @@ export function PhasePanels({ phase, loading, loadingUpcoming }: PhasePanelsProp
       ) : (
         <article className="phase-panel">
           <SectionTitle eyebrow="Current Phase" title={phase.name} />
-          <div className="progress-track" title={`${formatNumber(phase.progress, 1)}%`}>
+          <div className="progress-track" title={`${formatNumber(phase.progress, 1)}% complete, ${formatBlockDuration(phase.blocksRemaining)} remaining`}>
             <span className="progress-time-ratio">
-              {formatBlockDuration(phase.cycleBlock)} / {formatBlockDuration(phase.blocksRemaining)}
+              {formatBlockDuration(phase.blocksRemaining)} remaining
             </span>
             <i style={{ width: `${phase.progress}%` }} />
             <span className="progress-cursor" style={{ left: `${phase.progress}%` }}>

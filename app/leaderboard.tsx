@@ -81,7 +81,15 @@ export default function Leaderboard() {
       return model.rows;
     }
 
-    return model.rows.filter((row) => `${row.uid} ${row.hotkey} ${row.repo} ${row.revision}`.toLowerCase().includes(needle));
+    return model.rows.filter((row) => [
+      row.uid,
+      row.hotkey,
+      row.repo,
+      row.revision,
+      row.cohortGroup,
+      row.cohortGroupCode,
+      row.lastObservedCommitBlock
+    ].filter((value) => value !== null && value !== undefined).join(" ").toLowerCase().includes(needle));
   }, [model.rows, query]);
 
   useEffect(() => {

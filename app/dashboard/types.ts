@@ -15,6 +15,11 @@ export type MinerRow = {
   hotkey: string;
   repo: string;
   revision: string;
+  cohortGroup: string | null;
+  cohortGroupCode: number | null;
+  lastObservedCommitBlock: number | null;
+  lastObservedCommitBlockLag: number | null;
+  committedRecently: boolean | null;
   score: number | null;
   loss: number | null;
   deltaLoss: number | null;
@@ -40,6 +45,11 @@ export type ValidatorMetric = {
   validatorStatus: string | null;
   evalStatusCode: number | null;
   evalStatusLabel: string | null;
+  assignmentRole: string | null;
+  assignmentRoleCode: number | null;
+  lastObservedCommitBlock: number | null;
+  rank: number | null;
+  rankTotal: number | null;
   failureReasons: string[];
 };
 

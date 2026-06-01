@@ -264,6 +264,13 @@ h1 {
   line-height: 1.05;
 }
 
+.brand-copy h1 span {
+  color: var(--muted);
+  font-size: var(--font-lg);
+  font-weight: 900;
+  vertical-align: baseline;
+}
+
 .header-actions {
   justify-content: flex-end;
   gap: 10px;
@@ -2174,7 +2181,7 @@ thead th > small {
 }
 
 tbody td {
-  height: 58px;
+  height: 46px;
   padding: 0 6px;
   border-bottom: 1px solid var(--table-row-border);
   color: var(--table-text);
@@ -2345,13 +2352,13 @@ tbody td {
 
 .validator-mini-card {
   min-width: 0;
-  min-height: 52px;
+  min-height: 42px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
   align-items: center;
-  gap: 4px 7px;
-  padding: 6px 7px;
+  gap: 2px 6px;
+  padding: 3px 6px;
   border: 0;
   border-radius: 0;
   background: var(--panel-soft);

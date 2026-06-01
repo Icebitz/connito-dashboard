@@ -1,6 +1,5 @@
 import { Database, ExternalLink, Moon, RefreshCw, Sun } from "lucide-react";
 
-import { formatInteger } from "../format";
 import type { DashboardStatus, Theme } from "../types";
 
 type DashboardHeaderProps = {
@@ -27,8 +26,7 @@ export function DashboardHeader({
       <div className="brand-block">
         <img className="brand-logo" src="/logo.svg" alt="" width="48" height="48" />
         <div className="brand-copy">
-          <span className="eyebrow">Connito Subnet</span>
-          <h1>Subnet {formatInteger(netuid)} Dashboard</h1>
+          <h1>Connito Leaderboard <span>(SN{netuid})</span></h1>
         </div>
       </div>
 

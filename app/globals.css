@@ -264,6 +264,13 @@ h1 {
   line-height: 1.05;
 }
 
+.brand-copy h1 span {
+  color: var(--muted);
+  font-size: var(--font-lg);
+  font-weight: 900;
+  vertical-align: baseline;
+}
+
 .header-actions {
   justify-content: flex-end;
   gap: 10px;

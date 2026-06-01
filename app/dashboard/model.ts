@@ -89,6 +89,28 @@ function isBurnRow(row: Pick<MinerRow, "uid">) {
   return row.uid === "0";
 }
 
+function getCohortGroupLabel(group: string | null, code: number | null) {
+  const normalized = group?.trim();
+
+  if (normalized && !["-", "none", "null", "undefined"].includes(normalized.toLowerCase())) {
+    return normalized.toUpperCase();
+  }
+
+  if (code === 1) {
+    return "A";
+  }
+
+  if (code === 2) {
+    return "B";
+  }
+
+  if (code === 3) {
+    return "C";
+  }
+
+  return null;
+}
+
 function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
   const metrics = Array.isArray(row.validator_metrics) ? row.validator_metrics.filter(isRecord) : [];
 
@@ -120,6 +142,11 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
         validatorStatus: asText(metric.validator_status),
         evalStatusCode: asNumber(metric.eval_status_code),
         evalStatusLabel: asText(metric.eval_status_label),
+        assignmentRole: asText(metric.assignment_role),
+        assignmentRoleCode: asNumber(metric.assignment_role_code),
+        lastObservedCommitBlock: asNumber(metric.last_observed_commit_block),
+        rank: asNumber(metric.rank),
+        rankTotal: asNumber(metric.rank_total),
         failureReasons: asTextArray(metric.observed_failure_reasons)
       };
     });
@@ -149,6 +176,11 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
       validatorStatus: null,
       evalStatusCode: null,
       evalStatusLabel: null,
+      assignmentRole: null,
+      assignmentRoleCode: null,
+      lastObservedCommitBlock: null,
+      rank: null,
+      rankTotal: null,
       failureReasons: []
     };
   });
@@ -175,12 +207,21 @@ function getLeaderboardRows(data: Record<string, unknown>): MinerRow[] {
   return records
     .map((row) => {
       const validatorMetrics = getValidatorMetrics(row);
+      const cohortGroupCode = asNumber(row.cohort_group_code) ?? asNumber(row.group_code);
 
       return {
         uid: asText(row.uid) ?? asText(row.miner_uid) ?? "-",
         hotkey: asText(row.hotkey) ?? "-",
         repo: asText(row.hf_repo_id) ?? "-",
         revision: asText(row.hf_revision) ?? "-",
+        cohortGroup: getCohortGroupLabel(
+          asText(row.cohort_group) ?? asText(row.group) ?? asText(row.assignment_group),
+          cohortGroupCode
+        ),
+        cohortGroupCode,
+        lastObservedCommitBlock: asNumber(row.last_observed_commit_block_any) ?? asNumber(row.last_observed_commit_block),
+        lastObservedCommitBlockLag: asNumber(row.last_observed_commit_block_lag),
+        committedRecently: asBoolean(row.committed_recently),
         score: asNumber(row.score)
           ?? asNumber(row.score_avg)
           ?? asNumber(row.avg_score)

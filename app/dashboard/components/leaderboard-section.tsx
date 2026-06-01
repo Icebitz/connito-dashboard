@@ -13,6 +13,13 @@ const NO_CHAIN_COMMIT_STATUS = "no_chain_commit";
 const OK_STATUS = "ok";
 const EMPTY_METRIC_VALUE = "-";
 
+type LeaderboardSortKey = "rank" | "group" | "loss" | "score" | "weight";
+type LeaderboardSortDirection = "asc" | "desc";
+type LeaderboardSort = {
+  key: LeaderboardSortKey;
+  direction: LeaderboardSortDirection;
+};
+
 function normalizeStoredUids(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
@@ -36,6 +43,119 @@ type LeaderboardSectionProps = {
   onToggleMinerDetails: (row: MinerRow) => void;
 };
 
+function getDefaultSortDirection(key: LeaderboardSortKey): LeaderboardSortDirection {
+  return key === "loss" || key === "rank" || key === "group" ? "asc" : "desc";
+}
+
+function getGroupSortRank(group: string | null) {
+  const normalized = group?.trim().toUpperCase();
+
+  if (normalized === "A") {
+    return 0;
+  }
+
+  if (normalized === "B") {
+    return 1;
+  }
+
+  if (normalized === "C") {
+    return 2;
+  }
+
+  return 3;
+}
+
+function compareNullableNumbers(a: number | null, b: number | null, direction: LeaderboardSortDirection) {
+  if (a === null && b === null) {
+    return 0;
+  }
+
+  if (a === null) {
+    return 1;
+  }
+
+  if (b === null) {
+    return -1;
+  }
+
+  return direction === "asc" ? a - b : b - a;
+}
+
+function compareGroups(a: MinerRow, b: MinerRow, direction: LeaderboardSortDirection) {
+  const aRank = getGroupSortRank(a.cohortGroup);
+  const bRank = getGroupSortRank(b.cohortGroup);
+  const missingGroupRank = 3;
+
+  if (aRank === missingGroupRank && bRank !== missingGroupRank) {
+    return 1;
+  }
+
+  if (bRank === missingGroupRank && aRank !== missingGroupRank) {
+    return -1;
+  }
+
+  if (aRank !== bRank) {
+    return direction === "asc" ? aRank - bRank : bRank - aRank;
+  }
+
+  return (a.cohortGroup ?? "").localeCompare(b.cohortGroup ?? "");
+}
+
+function compareRowsBySort(a: MinerRow, b: MinerRow, sort: LeaderboardSort) {
+  if (sort.key === "rank") {
+    return compareNullableNumbers(a.rank, b.rank, sort.direction);
+  }
+
+  if (sort.key === "group") {
+    return compareGroups(a, b, sort.direction);
+  }
+
+  if (sort.key === "loss") {
+    return compareNullableNumbers(a.loss, b.loss, sort.direction);
+  }
+
+  if (sort.key === "score") {
+    return compareNullableNumbers(a.score, b.score, sort.direction);
+  }
+
+  return compareNullableNumbers(a.weight, b.weight, sort.direction);
+}
+
+function sortLeaderboardRows(rows: MinerRow[], sort: LeaderboardSort) {
+  return [...rows].sort((a, b) => {
+    const sortDelta = compareRowsBySort(a, b, sort);
+    return sortDelta === 0 ? a.rank - b.rank : sortDelta;
+  });
+}
+
+type SortableLeaderboardHeaderProps = {
+  className: string;
+  label: string;
+  sortKey: LeaderboardSortKey;
+  sort: LeaderboardSort;
+  title?: string;
+  onSort: (key: LeaderboardSortKey) => void;
+};
+
+function SortableLeaderboardHeader({ className, label, sortKey, sort, title, onSort }: SortableLeaderboardHeaderProps) {
+  const active = sort.key === sortKey;
+  const ariaSort = active ? sort.direction === "asc" ? "ascending" : "descending" : "none";
+
+  return (
+    <th className={className} title={title} aria-sort={ariaSort}>
+      <button
+        type="button"
+        className={`sort-header-button${active ? " sort-header-button-active" : ""}`}
+        aria-label={`Sort by ${label} ${active && sort.direction === "asc" ? "descending" : "ascending"}`}
+        onClick={() => onSort(sortKey)}
+      >
+        <span>{label}</span>
+        <i aria-hidden="true" data-direction={active ? sort.direction : "none"} />
+      </button>
+    </th>
+  );
+}
+
 export function LeaderboardSection({
   allRows,
   filteredRows,
@@ -56,6 +176,7 @@ export function LeaderboardSection({
   const [viewListUids, setViewListUids] = useState<string[]>([]);
   const [viewListHydrated, setViewListHydrated] = useState(false);
   const [showViewListOnly, setShowViewListOnly] = useState(false);
+  const [sort, setSort] = useState<LeaderboardSort>({ key: "rank", direction: "asc" });
   const viewListItems = useMemo(() => {
     const rowsByUid = new Map(allRows.map((row) => [row.uid, row]));
     return viewListUids.map((uid) => ({ uid, row: rowsByUid.get(uid) }));
@@ -65,18 +186,19 @@ export function LeaderboardSection({
     () => showViewListOnly ? filteredRows.filter((row) => viewListUidSet.has(row.uid)) : filteredRows,
     [filteredRows, showViewListOnly, viewListUidSet]
   );
-  const totalRows = displayedRows.length;
+  const sortedRows = useMemo(() => sortLeaderboardRows(displayedRows, sort), [displayedRows, sort]);
+  const totalRows = sortedRows.length;
   const pageCount = Math.max(1, Math.ceil(totalRows / pageSize));
   const safeCurrentPage = Math.min(currentPage, pageCount);
   const pageStart = (safeCurrentPage - 1) * pageSize;
-  const pageRows = useMemo(() => displayedRows.slice(pageStart, pageStart + pageSize), [displayedRows, pageSize, pageStart]);
+  const pageRows = useMemo(() => sortedRows.slice(pageStart, pageStart + pageSize), [sortedRows, pageSize, pageStart]);
   const visibleStart = totalRows ? pageStart + 1 : 0;
   const visibleEnd = Math.min(pageStart + pageSize, totalRows);
   const emptyLeaderboardMessage = showViewListOnly ? "No selected miners match the current search." : "No miners match the current search.";
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, pageSize, showViewListOnly]);
+  }, [query, pageSize, showViewListOnly, sort]);
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, pageCount));
@@ -140,6 +262,12 @@ export function LeaderboardSection({
 
   const removeViewListMiner = (uid: string) => {
     setViewListUids((uids) => uids.filter((selectedUid) => selectedUid !== uid));
+  };
+
+  const updateSort = (key: LeaderboardSortKey) => {
+    setSort((current) => current.key === key
+      ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
+      : { key, direction: getDefaultSortDirection(key) });
   };
 
   return (
@@ -208,15 +336,16 @@ export function LeaderboardSection({
         <table>
           <thead>
             <tr>
-              <th className="rank-column"><span>Rank</span></th>
+              <SortableLeaderboardHeader className="rank-column" label="Rank" sortKey="rank" sort={sort} onSort={updateSort} />
               <th className="uid-column"><span>UID</span></th>
+              <SortableLeaderboardHeader className="cohort-column" label="Group" sortKey="group" sort={sort} onSort={updateSort} />
               <th className="miner-column"><span>Miner</span><small>Hotkey + repo</small></th>
-              <th className="loss-column" title="Loss"><span>Loss</span></th>
+              <SortableLeaderboardHeader className="loss-column" label="Loss" sortKey="loss" sort={sort} onSort={updateSort} />
               <th className="delta-loss-column" title="Delta"><span>Delta</span></th>
-              <th className="score-column" title="Leaderboard score"><span>Score</span></th>
-              <th className="weight-column" title="Chain weight"><span>Weight</span></th>
+              <SortableLeaderboardHeader className="score-column" label="Score" sortKey="score" sort={sort} onSort={updateSort} title="Leaderboard score" />
+              <SortableLeaderboardHeader className="weight-column" label="Weight" sortKey="weight" sort={sort} onSort={updateSort} title="Chain weight" />
               <th className="assigned-column"><span>Accepted</span></th>
-              <th className="validator-grid-column"><span>Validators</span><small>Loss / weight</small></th>
+              <th className="validator-grid-column"><span>Validators</span><small>Rank / loss / weight / eval</small></th>
             </tr>
           </thead>
           <tbody>
@@ -488,6 +617,9 @@ function LeaderboardRow({ row, validatorHealth, selected, monitored, onToggleVie
           </div>
         </td>
         <td className="uid-column" data-label="UID">{row.uid}</td>
+        <td className="cohort-column" data-label="Group">
+          <CohortGroupBadge row={row} />
+        </td>
         <td className="miner-column" data-label="Miner" title={`${row.hotkey} ${repoRevisionLabel}`}>
           <div className="miner-cell">
             <strong>
@@ -500,9 +632,9 @@ function LeaderboardRow({ row, validatorHealth, selected, monitored, onToggleVie
             <span>
               {repoRevisionUrl ? (
                 <a className="table-link" href={repoRevisionUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-                  {shortText(repoRevisionLabel, 30, 0)}
+                  {shortText(repoRevisionLabel, 20, 0)}
                 </a>
-              ) : shortText(repoRevisionLabel, 30, 0)}
+              ) : shortText(repoRevisionLabel, 20, 0)}
             </span>
           </div>
         </td>
@@ -522,29 +654,23 @@ function LeaderboardRow({ row, validatorHealth, selected, monitored, onToggleVie
               const health = getValidatorHealthForSlot(validatorHealth, index);
               const tone = getValidatorTone(health, metric);
               const metricClassName = getMetricClassName(metric?.evalStatusLabel);
-              const isNoCommit = isNoChainCommitStatus(metric?.evalStatusLabel);
-              const valLoss = renderMetricByEvalStatus(metric?.valLoss, metric?.evalStatusLabel, 4);
-              const weight = renderMetricByEvalStatus(metric?.weightSubmitted, metric?.evalStatusLabel, 4);
-              const valLossTitle = formatMetricByEvalStatus(metric?.valLoss, metric?.evalStatusLabel, 4);
-              const weightTitle = formatMetricByEvalStatus(metric?.weightSubmitted, metric?.evalStatusLabel, 4);
+              const rank = metric ? formatValidatorMiniRank(metric) : EMPTY_METRIC_VALUE;
+              const valLoss = formatLeaderboardMetricNumber(metric?.valLoss, 4);
+              const weight = formatLeaderboardMetricNumber(metric?.weightSubmitted, 4);
+              const evalStatus = formatShortEvalStatus(metric?.evalStatusLabel);
 
               return (
                 <span
-                  className={`validator-mini-card validator-mini-${tone}${isNoCommit ? " validator-mini-status-only" : ""}`}
+                  className={`validator-mini-card validator-mini-${tone}`}
                   key={`${rowKey}-validator-${index}`}
-                  title={metric ? isNoCommit ? `${metric.label}: ${formatShortEvalStatus(metric.evalStatusLabel)}` : `${metric.label}: loss ${valLossTitle}, weight ${weightTitle}` : `Validator ${index + 1}: ${formatValidatorStatus(health?.status)}`}
+                  title={metric
+                    ? `${metric.label}: ${formatAssignmentRole(metric.assignmentRole)}, rank ${formatValidatorRank(metric)}, loss ${valLoss}, weight ${weight}, eval ${formatEvalStatus(metric.evalStatusLabel)}`
+                    : `Validator ${index + 1}: ${formatValidatorStatus(health?.status)}`}
                 >
-                  <em>V{index + 1}</em>
-                  {isNoCommit ? (
-                    <strong className={`validator-mini-status ${metricClassName ?? ""}`}>
-                      <MetricStatusMarker status={metric?.evalStatusLabel} />
-                    </strong>
-                  ) : (
-                    <>
-                      <strong className={metricClassName}><span>L</span>{valLoss}</strong>
-                      <small className={metricClassName}><span>W</span>{weight}</small>
-                    </>
-                  )}
+                  <strong><span>R</span>{rank}</strong>
+                  <strong><span>L</span>{valLoss}</strong>
+                  <small><span>W</span>{weight}</small>
+                  <small className={metricClassName}><span>E</span>{evalStatus}</small>
                 </span>
               );
             })}
@@ -569,6 +695,33 @@ function getValidatorMetricForColumn(row: MinerRow, index: number) {
 
 function getValidatorHealthForSlot(validatorHealth: ValidatorHealth[], index: number) {
   return validatorHealth.find((validator) => validator.slot === index + 1);
+}
+
+function getCohortTone(group: string | null | undefined) {
+  const normalized = group?.trim().toLowerCase();
+
+  if (normalized === "a" || normalized === "b" || normalized === "c") {
+    return normalized;
+  }
+
+  return "none";
+}
+
+function formatCohortGroup(row: MinerRow) {
+  return row.cohortGroup ?? "-";
+}
+
+function CohortGroupBadge({ row, prefix = "" }: { row: MinerRow; prefix?: string }) {
+  const label = row.cohortGroup ?? (prefix ? "none" : formatCohortGroup(row));
+  const title = row.cohortGroup
+    ? `Cohort group ${row.cohortGroup}${row.cohortGroupCode === null ? "" : ` (code ${row.cohortGroupCode})`}`
+    : "No cohort group";
+
+  return (
+    <span className={`cohort-pill cohort-${getCohortTone(row.cohortGroup)}`} title={title}>
+      {prefix}{label}
+    </span>
+  );
 }
 
 function getValidatorTone(health: ValidatorHealth | undefined, metric?: ValidatorMetric) {
@@ -729,6 +882,69 @@ function getEvalBadgeClassName(status: string | null | undefined) {
   return normalized ? "detail-eval-warning" : "detail-eval-missing";
 }
 
+function formatAssignmentRole(role: string | null | undefined) {
+  return role ? role.replace(/_/g, " ") : "-";
+}
+
+function getRoleBadgeClassName(role: string | null | undefined) {
+  const normalized = role?.trim().toLowerCase();
+
+  if (normalized === "foreground") {
+    return "detail-role-foreground";
+  }
+
+  if (normalized === "background") {
+    return "detail-role-background";
+  }
+
+  return normalized ? "detail-role-other" : "detail-role-missing";
+}
+
+function formatValidatorRank(metric: ValidatorMetric) {
+  if (metric.rank === null) {
+    return "-";
+  }
+
+  return metric.rankTotal === null ? formatInteger(metric.rank) : `${formatInteger(metric.rank)} / ${formatInteger(metric.rankTotal)}`;
+}
+
+function formatValidatorMiniRank(metric: ValidatorMetric) {
+  if (metric.rank === null) {
+    return EMPTY_METRIC_VALUE;
+  }
+
+  return metric.rankTotal === null ? formatInteger(metric.rank) : `${formatInteger(metric.rank)}/${formatInteger(metric.rankTotal)}`;
+}
+
+function getCommitTone(committedRecently: boolean | null | undefined) {
+  if (committedRecently === true) {
+    return "fresh";
+  }
+
+  if (committedRecently === false) {
+    return "stale";
+  }
+
+  return "unknown";
+}
+
+function formatCommitFreshness(committedRecently: boolean | null | undefined) {
+  if (committedRecently === true) {
+    return "Fresh";
+  }
+
+  if (committedRecently === false) {
+    return "Stale";
+  }
+
+  return "-";
+}
+
+function formatCommitLag(blocks: number | null | undefined) {
+  const formatted = formatInteger(blocks);
+  return formatted === "-" ? "-" : `${formatted} block${blocks === 1 ? "" : "s"}`;
+}
+
 function MinerValidatorDetails({ row }: { row: MinerRow }) {
   const hotkeyUrl = getHotkeyUrl(row.hotkey);
   const repoUrl = getHuggingFaceRepoUrl(row.repo);
@@ -751,6 +967,10 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
           </strong>
         </div>
         <div className="miner-detail-actions">
+          <CohortGroupBadge row={row} prefix="Group " />
+          <span className={`commit-pill commit-${getCommitTone(row.committedRecently)}`}>
+            Commit {formatCommitFreshness(row.committedRecently)}
+          </span>
           <span className={`assignment-pill assignment-${assignmentTone}`}>Accepted {assignmentLabel}</span>
           {hotkeyUrl ? (
             <a className="detail-link" href={hotkeyUrl} target="_blank" rel="noreferrer">
@@ -786,6 +1006,32 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
             {formatLeaderboardMetricNumber(row.weight, 4)}
           </strong>
         </div>
+        <div className="miner-summary-item">
+          <span>Last commit</span>
+          <strong title={row.lastObservedCommitBlock === null ? undefined : String(row.lastObservedCommitBlock)}>
+            {formatBlock(row.lastObservedCommitBlock)}
+          </strong>
+        </div>
+        <div className="miner-summary-item">
+          <span>Commit lag</span>
+          <strong title={row.lastObservedCommitBlockLag === null ? undefined : String(row.lastObservedCommitBlockLag)}>
+            {formatCommitLag(row.lastObservedCommitBlockLag)}
+          </strong>
+        </div>
+        <div className="miner-summary-item">
+          <span>Commit status</span>
+          <strong>
+            <span className={`commit-pill commit-${getCommitTone(row.committedRecently)}`}>
+              {formatCommitFreshness(row.committedRecently)}
+            </span>
+          </strong>
+        </div>
+        <div className="miner-summary-item">
+          <span>Group</span>
+          <strong>
+            <CohortGroupBadge row={row} />
+          </strong>
+        </div>
       </div>
 
       <div className="validator-detail-frame">
@@ -794,12 +1040,15 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
             <thead>
               <tr>
                 <th>Validator</th>
+                <th>Role</th>
+                <th>Rank</th>
                 <th>Loss</th>
                 <th>Score</th>
                 <th>Weight</th>
                 <th>Status</th>
                 <th>Chain UID</th>
                 <th>Eval</th>
+                <th>Commit</th>
                 <th>Block</th>
               </tr>
             </thead>
@@ -822,6 +1071,14 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
                           )}
                         </div>
                       </td>
+                      <td>
+                        <span className={`detail-role-badge ${getRoleBadgeClassName(metric.assignmentRole)}`}>
+                          {formatAssignmentRole(metric.assignmentRole)}
+                        </span>
+                      </td>
+                      <td title={metric.rank === null ? undefined : `${formatValidatorRank(metric)} in validator ${metric.label}`}>
+                        {formatValidatorRank(metric)}
+                      </td>
                       <td className={getMetricClassName(metric.evalStatusLabel)} title={shouldDisplayEvalStatusAsMetric(metric.evalStatusLabel) ? formatShortEvalStatus(metric.evalStatusLabel) : metric.valLoss === null ? undefined : String(metric.valLoss)}>{renderMetricByEvalStatus(metric.valLoss, metric.evalStatusLabel, 6)}</td>
                       <td className={getMetricClassName(metric.evalStatusLabel)} title={formatMetricByEvalStatus(metric.score, metric.evalStatusLabel, 6)}>{renderMetricByEvalStatus(metric.score, metric.evalStatusLabel, 6)}</td>
                       <td className={getMetricClassName(metric.evalStatusLabel)} title={shouldDisplayEvalStatusAsMetric(metric.evalStatusLabel) ? formatShortEvalStatus(metric.evalStatusLabel) : metric.weightSubmitted === null ? undefined : String(metric.weightSubmitted)}>{renderMetricByEvalStatus(metric.weightSubmitted, metric.evalStatusLabel, 4)}</td>
@@ -836,6 +1093,9 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
                           {formatEvalStatus(metric.evalStatusLabel)}
                         </span>
                       </td>
+                      <td title={metric.lastObservedCommitBlock === null ? "No commit block reported" : `Last observed commit block ${formatBlock(metric.lastObservedCommitBlock)}`}>
+                        <span className="validator-block-number">{formatBlock(metric.lastObservedCommitBlock)}</span>
+                      </td>
                       <td title={formatValidatorBlockTitle(metric)}>
                         <span className="validator-block-number">{formatValidatorBlock(metric)}</span>
                       </td>
@@ -844,7 +1104,7 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
                 })
               ) : (
                 <tr>
-                  <td colSpan={8}>No validator metrics reported for this miner.</td>
+                  <td colSpan={11}>No validator metrics reported for this miner.</td>
                 </tr>
               )}
             </tbody>

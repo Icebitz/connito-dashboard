@@ -13,7 +13,7 @@ const NO_CHAIN_COMMIT_STATUS = "no_chain_commit";
 const OK_STATUS = "ok";
 const EMPTY_METRIC_VALUE = "-";
 
-type LeaderboardSortKey = "rank" | "group" | "loss" | "score" | "weight";
+type LeaderboardSortKey = "rank" | "uid" | "group" | "loss" | "deltaLoss" | "score" | "weight";
 type LeaderboardSortDirection = "asc" | "desc";
 type LeaderboardSort = {
   key: LeaderboardSortKey;
@@ -44,7 +44,7 @@ type LeaderboardSectionProps = {
 };
 
 function getDefaultSortDirection(key: LeaderboardSortKey): LeaderboardSortDirection {
-  return key === "loss" || key === "rank" || key === "group" ? "asc" : "desc";
+  return key === "loss" || key === "deltaLoss" || key === "rank" || key === "uid" || key === "group" ? "asc" : "desc";
 }
 
 function getGroupSortRank(group: string | null) {
@@ -101,9 +101,18 @@ function compareGroups(a: MinerRow, b: MinerRow, direction: LeaderboardSortDirec
   return (a.cohortGroup ?? "").localeCompare(b.cohortGroup ?? "");
 }
 
+function getSortableUid(uid: string) {
+  const value = Number(uid);
+  return Number.isFinite(value) ? value : null;
+}
+
 function compareRowsBySort(a: MinerRow, b: MinerRow, sort: LeaderboardSort) {
   if (sort.key === "rank") {
     return compareNullableNumbers(a.rank, b.rank, sort.direction);
+  }
+
+  if (sort.key === "uid") {
+    return compareNullableNumbers(getSortableUid(a.uid), getSortableUid(b.uid), sort.direction);
   }
 
   if (sort.key === "group") {
@@ -112,6 +121,10 @@ function compareRowsBySort(a: MinerRow, b: MinerRow, sort: LeaderboardSort) {
 
   if (sort.key === "loss") {
     return compareNullableNumbers(a.loss, b.loss, sort.direction);
+  }
+
+  if (sort.key === "deltaLoss") {
+    return compareNullableNumbers(a.deltaLoss, b.deltaLoss, sort.direction);
   }
 
   if (sort.key === "score") {
@@ -337,11 +350,11 @@ export function LeaderboardSection({
           <thead>
             <tr>
               <SortableLeaderboardHeader className="rank-column" label="Rank" sortKey="rank" sort={sort} onSort={updateSort} />
-              <th className="uid-column"><span>UID</span></th>
+              <SortableLeaderboardHeader className="uid-column" label="UID" sortKey="uid" sort={sort} onSort={updateSort} />
               <SortableLeaderboardHeader className="cohort-column" label="Group" sortKey="group" sort={sort} onSort={updateSort} />
               <th className="miner-column"><span>Miner</span><small>Hotkey + repo</small></th>
               <SortableLeaderboardHeader className="loss-column" label="Loss" sortKey="loss" sort={sort} onSort={updateSort} />
-              <th className="delta-loss-column" title="Delta"><span>Delta</span></th>
+              <SortableLeaderboardHeader className="delta-loss-column" label="Delta" sortKey="deltaLoss" sort={sort} onSort={updateSort} title="Delta" />
               <SortableLeaderboardHeader className="score-column" label="Score" sortKey="score" sort={sort} onSort={updateSort} title="Leaderboard score" />
               <SortableLeaderboardHeader className="weight-column" label="Weight" sortKey="weight" sort={sort} onSort={updateSort} title="Chain weight" />
               <th className="assigned-column"><span>Accepted</span></th>
@@ -638,10 +651,14 @@ function LeaderboardRow({ row, validatorHealth, selected, monitored, onToggleVie
             </span>
           </div>
         </td>
-        <td className="loss-column" data-label="Loss">{rowLoss}</td>
+        <td className="loss-column" data-label="Loss">
+          <span className="leaderboard-metric-pill leaderboard-loss-pill">{rowLoss}</span>
+        </td>
         <td className="delta-loss-column" data-label="Delta">{rowDeltaLoss}</td>
         <td className="score-column" data-label="Score">{rowScore}</td>
-        <td className="weight-column" data-label="Weight">{rowWeight}</td>
+        <td className="weight-column" data-label="Weight">
+          <span className="leaderboard-metric-pill leaderboard-weight-pill">{rowWeight}</span>
+        </td>
         <td className="assigned-column" data-label="Accepted">
           <span className={`assignment-pill assignment-${row.assigned === null ? "unknown" : row.assigned ? "yes" : "no"}`}>
             {row.assigned === null ? "-" : row.assigned ? "Yes" : "No"}
@@ -653,7 +670,6 @@ function LeaderboardRow({ row, validatorHealth, selected, monitored, onToggleVie
               const metric = getValidatorMetricForColumn(row, index);
               const health = getValidatorHealthForSlot(validatorHealth, index);
               const tone = getValidatorTone(health, metric);
-              const metricClassName = getMetricClassName(metric?.evalStatusLabel);
               const rank = metric ? formatValidatorMiniRank(metric) : EMPTY_METRIC_VALUE;
               const valLoss = formatLeaderboardMetricNumber(metric?.valLoss, 4);
               const weight = formatLeaderboardMetricNumber(metric?.weightSubmitted, 4);
@@ -667,10 +683,10 @@ function LeaderboardRow({ row, validatorHealth, selected, monitored, onToggleVie
                     ? `${metric.label}: ${formatAssignmentRole(metric.assignmentRole)}, rank ${formatValidatorRank(metric)}, loss ${valLoss}, weight ${weight}, eval ${formatEvalStatus(metric.evalStatusLabel)}`
                     : `Validator ${index + 1}: ${formatValidatorStatus(health?.status)}`}
                 >
-                  <strong><span>R</span>{rank}</strong>
-                  <strong><span>L</span>{valLoss}</strong>
-                  <small><span>W</span>{weight}</small>
-                  <small className={metricClassName}><span>E</span>{evalStatus}</small>
+                  <strong className="validator-mini-rank-metric"><span>R</span>{rank}</strong>
+                  <strong className="validator-mini-loss-metric"><span>L</span>{valLoss}</strong>
+                  <small className="validator-mini-weight-metric"><span>W</span>{weight}</small>
+                  <small className="validator-mini-eval-metric"><span>E</span>{evalStatus}</small>
                 </span>
               );
             })}
@@ -913,7 +929,7 @@ function formatValidatorMiniRank(metric: ValidatorMetric) {
     return EMPTY_METRIC_VALUE;
   }
 
-  return metric.rankTotal === null ? formatInteger(metric.rank) : `${formatInteger(metric.rank)}/${formatInteger(metric.rankTotal)}`;
+  return metric.rankTotal === null ? formatInteger(metric.rank) : `${formatInteger(metric.rank)} / ${formatInteger(metric.rankTotal)}`;
 }
 
 function getCommitTone(committedRecently: boolean | null | undefined) {

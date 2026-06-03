@@ -2347,7 +2347,7 @@ tbody td {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1px;
-  background: var(--table-row-border);
+  background: transparent;
 }
 
 .validator-mini-card {
@@ -2361,7 +2361,7 @@ tbody td {
   padding: 3px 6px;
   border: 0;
   border-radius: 0;
-  background: var(--panel-soft);
+  background: transparent;
 }
 
 .validator-mini-card strong,
@@ -2402,21 +2402,75 @@ tbody td {
   opacity: 0.7;
 }
 
+.validator-mini-card .validator-mini-rank-metric,
+.validator-mini-card .validator-mini-loss-metric,
+.validator-mini-card .validator-mini-weight-metric,
+.validator-mini-card .validator-mini-eval-metric {
+  min-height: 16px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 5px;
+  font-weight: 900;
+}
+
+.validator-mini-card .validator-mini-rank-metric,
+.validator-mini-card .validator-mini-eval-metric {
+  background: transparent;
+  color: var(--muted);
+}
+
+.validator-mini-card .validator-mini-loss-metric {
+  background: transparent;
+  color: var(--blue);
+}
+
+.validator-mini-card .validator-mini-weight-metric {
+  background: transparent;
+  color: var(--cyan);
+}
+
+.validator-mini-card .validator-mini-rank-metric span,
+.validator-mini-card .validator-mini-loss-metric span,
+.validator-mini-card .validator-mini-weight-metric span,
+.validator-mini-card .validator-mini-eval-metric span {
+  color: currentColor;
+  opacity: 0.76;
+}
+
 .validator-mini-live {
-  background: linear-gradient(180deg, rgba(73, 208, 139, 0.12), rgba(73, 208, 139, 0.06)), var(--panel-soft);
+  background: transparent;
 }
 
 .validator-mini-partial,
 .validator-mini-missing {
-  background: linear-gradient(180deg, rgba(240, 183, 91, 0.13), rgba(240, 183, 91, 0.06)), var(--panel-soft);
+  background: transparent;
 }
 
 .validator-mini-down {
-  background: linear-gradient(180deg, rgba(255, 101, 125, 0.13), rgba(255, 101, 125, 0.06)), var(--panel-soft);
+  background: transparent;
 }
 
-.validator-mini-down strong {
+.validator-mini-down strong,
+.validator-mini-down small,
+.validator-mini-down strong span,
+.validator-mini-down small span {
   color: var(--red);
+}
+
+.validator-mini-down .validator-mini-rank-metric,
+.validator-mini-down .validator-mini-loss-metric,
+.validator-mini-down .validator-mini-weight-metric,
+.validator-mini-down .validator-mini-eval-metric,
+.validator-mini-down .validator-mini-rank-metric span,
+.validator-mini-down .validator-mini-loss-metric span,
+.validator-mini-down .validator-mini-weight-metric span,
+.validator-mini-down .validator-mini-eval-metric span {
+  color: var(--red) !important;
+}
+
+.validator-mini-down .no-chain-commit-metric,
+.validator-mini-down .ok-eval-metric {
+  color: var(--red) !important;
 }
 
 .validator-mini-partial strong,
@@ -2543,6 +2597,31 @@ tbody .loss-column,
 tbody .delta-loss-column,
 tbody .assigned-column {
   text-align: right;
+}
+
+.leaderboard-metric-pill {
+  min-width: 58px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 22px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--panel-soft);
+  color: var(--heading);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.leaderboard-loss-pill {
+  background: rgba(90, 168, 255, 0.1);
+  color: var(--blue);
+}
+
+.leaderboard-weight-pill {
+  background: rgba(70, 215, 210, 0.11);
+  color: var(--cyan);
 }
 
 .no-chain-commit-metric {

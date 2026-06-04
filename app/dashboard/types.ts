@@ -3,6 +3,7 @@ export type ApiResponse = {
   ok?: boolean;
   source?: unknown;
   data?: unknown;
+  leaderboardHistory?: unknown;
   stale?: boolean;
   empty?: boolean;
   warning?: string;
@@ -27,6 +28,7 @@ export type MinerRow = {
   evaluations: number | null;
   assigned: boolean | null;
   validatorMetrics: ValidatorMetric[];
+  scoreHistory: MinerScoreHistoryRound[];
 };
 
 export type ValidatorMetric = {
@@ -53,8 +55,33 @@ export type ValidatorMetric = {
   failureReasons: string[];
 };
 
+export type MinerScoreHistoryRound = {
+  round: number;
+  rank: number | null;
+  phaseStartedAtBlock: number | null;
+  fetchedAt: string;
+  validators: MinerScoreHistoryValidator[];
+};
+
+export type MinerScoreHistoryValidator = {
+  validatorKey: string;
+  label: string;
+  slot: number | null;
+  uid: number | null;
+  rank: number | null;
+  rankTotal: number | null;
+  valLoss: number | null;
+  score: number | null;
+  weightSubmitted: number | null;
+  evalStatusLabel: string | null;
+  extractedAtBlock: number | null;
+};
+
 export type ValidatorHealth = {
   slot: number | null;
+  uid: number | null;
+  label: string | null;
+  hotkey: string | null;
   status: string | null;
   chainActive: boolean | null;
   promReachable: boolean | null;

@@ -1,5 +1,5 @@
 import { LEADERBOARD_SOURCE } from "./constants";
-import type { ApiResponse, DashboardModel, HistoryPoint, MinerRow, UpcomingPhase, ValidatorHealth, ValidatorMetric } from "./types";
+import type { ApiResponse, DashboardModel, HistoryPoint, MinerRow, MinerScoreHistoryRound, UpcomingPhase, ValidatorHealth, ValidatorMetric } from "./types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -192,6 +192,9 @@ function getValidatorHealth(meta: Record<string, unknown> | null): ValidatorHeal
   return health
     .map((validator) => ({
       slot: asNumber(validator.validator_slot) ?? asNumber(validator.slot),
+      uid: asNumber(validator.validator_uid) ?? asNumber(validator.uid),
+      label: asText(validator.validator_label) ?? asText(validator.label),
+      hotkey: asText(validator.validator_hotkey) ?? asText(validator.hotkey),
       status: asText(validator.validator_status) ?? asText(validator.status),
       chainActive: asBoolean(validator.chain_active),
       promReachable: asBoolean(validator.prom_reachable),
@@ -233,7 +236,8 @@ function getLeaderboardRows(data: Record<string, unknown>): MinerRow[] {
         weight: asNumber(row.chain_weight_stake_weighted) ?? asNumber(row.weight_submitted),
         evaluations: asNumber(row.evaluation_count) ?? asNumber(row.scored_by_count),
         assigned: asBoolean(row.in_assignment),
-        validatorMetrics
+        validatorMetrics,
+        scoreHistory: []
       };
     })
     .sort((a, b) => {
@@ -322,6 +326,58 @@ function getRoundHistory(round: Record<string, unknown> | null): HistoryPoint[] 
     .slice(-48);
 }
 
+function getHistoryValidatorKey(metric: Pick<ValidatorMetric, "slot" | "uid" | "label">) {
+  return `${metric.slot ?? ""}::${metric.uid ?? ""}::${metric.label}`;
+}
+
+function getMinerScoreHistoryMap(payload: unknown) {
+  const historyByUid = new Map<string, MinerScoreHistoryRound[]>();
+  const snapshots = Array.isArray(payload) ? payload.filter(isRecord) : [];
+
+  for (const snapshot of snapshots) {
+    const roundId = asNumber(snapshot.round) ?? asNumber(snapshot.roundId) ?? asNumber(snapshot.round_id);
+
+    if (roundId === null || !("data" in snapshot)) {
+      continue;
+    }
+
+    const data = unwrapDashboardData(snapshot.data);
+    const rows = getLeaderboardRows(data).filter((row) => !isBurnRow(row));
+
+    for (const row of rows) {
+      const history = historyByUid.get(row.uid) ?? [];
+      history.push({
+        round: roundId,
+        rank: row.rank,
+        phaseStartedAtBlock: asNumber(snapshot.phaseStartedAtBlock) ?? asNumber(snapshot.phase_started_at_block),
+        fetchedAt: asText(snapshot.fetchedAt) ?? asText(snapshot.fetched_at) ?? "",
+        validators: row.validatorMetrics.map((metric) => ({
+          validatorKey: getHistoryValidatorKey(metric),
+          label: metric.label,
+          slot: metric.slot,
+          uid: metric.uid,
+          rank: metric.rank,
+          rankTotal: metric.rankTotal,
+          valLoss: metric.valLoss,
+          score: metric.score,
+          weightSubmitted: metric.weightSubmitted,
+          evalStatusLabel: metric.evalStatusLabel,
+          extractedAtBlock: metric.extractedAtBlock
+        }))
+      });
+      historyByUid.set(row.uid, history);
+    }
+  }
+
+  for (const [uid, history] of historyByUid) {
+    historyByUid.set(uid, history
+      .sort((a, b) => a.round - b.round || (a.phaseStartedAtBlock ?? Number.MAX_SAFE_INTEGER) - (b.phaseStartedAtBlock ?? Number.MAX_SAFE_INTEGER))
+      .slice(-8));
+  }
+
+  return historyByUid;
+}
+
 function completeUpcomingPhases(phases: UpcomingPhase[]) {
   return phases
     .sort((a, b) => a.blocksUntilStart - b.blocksUntilStart || a.startBlock - b.startBlock || a.name.localeCompare(b.name))
@@ -387,6 +443,7 @@ function getProgress(into: number | null, remaining: number | null, start: numbe
 export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardModel {
   const data = unwrapDashboardData(leaderboard?.data);
   const meta = getDashboardMeta(leaderboard?.data);
+  const scoreHistoryByUid = getMinerScoreHistoryMap(leaderboard?.leaderboardHistory);
   const subnet = isRecord(data.subnet) ? data.subnet : null;
   const phase = isRecord(data.phase) ? data.phase : null;
   const round = isRecord(data.round) ? data.round : null;
@@ -402,7 +459,8 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
     .filter((row) => !isBurnRow(row))
     .map((row, index) => ({
       ...row,
-      rank: index + 1
+      rank: index + 1,
+      scoreHistory: scoreHistoryByUid.get(row.uid) ?? []
     }));
   const history = getRoundHistory(round);
   const phaseName = asText(phase?.name) ?? "-";

@@ -116,7 +116,6 @@ export default function Leaderboard() {
   const hasSyncedAt = Number.isFinite(fetchedAtMs);
   const lastSync = hasSyncedAt ? new Date(fetchedAtMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
   const syncCounter = hasSyncedAt ? `${formatDuration(nowMs - fetchedAtMs)} ago` : "-";
-  const topMiner = model.rows[0];
   const firstLoad = loading && leaderboard === null;
 
   return (
@@ -143,7 +142,6 @@ export default function Leaderboard() {
         filteredRows={filteredRows}
         query={query}
         selectedMinerKey={selectedMinerKey}
-        topMiner={topMiner}
         burnPercent={model.metrics.burnPercent}
         phase={model.phase}
         theme={theme}

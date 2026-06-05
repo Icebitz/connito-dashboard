@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, ChevronLeft, ChevronRight, Eye, EyeOff, Maximize2, Minimize2, Moon, Search, ShieldCheck, Sun, X } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Eye, EyeOff, Maximize2, Minimize2, Moon, Search, ShieldCheck, Sun, X } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
@@ -33,7 +33,6 @@ type LeaderboardSectionProps = {
   filteredRows: MinerRow[];
   query: string;
   selectedMinerKey: string | null;
-  topMiner: MinerRow | undefined;
   burnPercent: number | null;
   phase: DashboardModel["phase"];
   theme: Theme;
@@ -174,7 +173,6 @@ export function LeaderboardSection({
   filteredRows,
   query,
   selectedMinerKey,
-  topMiner,
   burnPercent,
   phase,
   theme,
@@ -343,7 +341,7 @@ export function LeaderboardSection({
         </div>
       </div>
 
-      <LeaderboardSummaryStrip topMiner={topMiner} burnPercent={burnPercent} meta={meta} />
+      <LeaderboardSummaryStrip rows={allRows} burnPercent={burnPercent} meta={meta} />
 
       <div className="table-frame">
         <table>
@@ -479,14 +477,12 @@ function FullscreenPhaseBar({ phase }: { phase: DashboardModel["phase"] }) {
 }
 
 type LeaderboardSummaryStripProps = {
-  topMiner: MinerRow | undefined;
+  rows: MinerRow[];
   burnPercent: number | null;
   meta: DashboardModel["meta"];
 };
 
-function LeaderboardSummaryStrip({ topMiner, burnPercent, meta }: LeaderboardSummaryStripProps) {
-  const topMinerHotkeyUrl = topMiner ? getHotkeyUrl(topMiner.hotkey) : null;
-  const topMinerRepoUrl = topMiner ? getHuggingFaceRepoUrl(topMiner.repo) : null;
+function LeaderboardSummaryStrip({ rows, burnPercent, meta }: LeaderboardSummaryStripProps) {
   const liveValidators = meta.validatorHealth.length
     ? meta.validatorHealth.filter((validator) => getValidatorTone(validator) === "live").length
     : meta.polledValidatorCount ?? 0;
@@ -495,53 +491,35 @@ function LeaderboardSummaryStrip({ topMiner, burnPercent, meta }: LeaderboardSum
 
   return (
     <div className="leaderboard-summary-strip">
-      <div className="leaderboard-summary-card leaderboard-summary-primary">
-        <BarChart3 size={17} />
-        <div>
-          <span>Top Chain Weight</span>
-          <strong>{topMiner ? `${formatNumber(topMiner.weight, 6)}` : "-"}</strong>
-        </div>
-        <div className="summary-miner-target">
-          <em>
-            {topMiner && topMinerHotkeyUrl ? (
-              <a className="table-link" href={topMinerHotkeyUrl} target="_blank" rel="noreferrer">
-                UID {topMiner.uid}
-              </a>
-            ) : topMiner ? `UID ${topMiner.uid}` : "-"}
-          </em>
-          <small>
-            {topMiner && topMinerRepoUrl ? (
-              <a className="table-link" href={topMinerRepoUrl} target="_blank" rel="noreferrer">
-                {shortText(topMiner.repo, 24, 0)}
-              </a>
-            ) : topMiner ? shortText(topMiner.repo, 24, 0) : "-"}
-          </small>
-        </div>
-      </div>
-
-      <div className="leaderboard-summary-card leaderboard-summary-compact">
-        <span>Burn</span>
-        <strong>{formatPercent(burnPercent, 2)}</strong>
-      </div>
-
       <div className="leaderboard-summary-card validator-health-summary">
         <ShieldCheck size={17} />
         <div>
-          <span>Validators</span>
+          <span>Validator</span>
           <strong>{validatorLabel} live</strong>
         </div>
-        <div className="validator-health-chips" aria-label="Validator slot health">
+        <div className="validator-health-list" aria-label="Validator slot health">
           {VALIDATOR_COLUMNS.map((index) => {
             const health = getValidatorHealthForSlot(meta.validatorHealth, index);
+            const metric = getValidatorMetricFromRows(rows, index);
             const tone = getValidatorTone(health);
+            const label = health?.label ?? metric?.label ?? `val-${String(index + 1).padStart(2, "0")}`;
+            const hotkey = health?.hotkey ?? (metric?.hotkey && metric.hotkey !== "-" ? metric.hotkey : null);
+            const hotkeyLabel = hotkey ? shortText(hotkey, 8, 6) : "-";
 
             return (
-              <span className={`validator-health-chip validator-health-${tone}`} key={`validator-health-${index}`} title={`Validator ${index + 1}: ${formatValidatorStatus(health?.status)}`}>
-                V{index + 1}
+              <span className={`validator-health-row validator-health-${tone}`} key={`validator-health-${index}`} title={`Validator ${index + 1}: ${formatValidatorStatus(health?.status)}${hotkey ? `, hotkey ${hotkey}` : ""}`}>
+                <strong>{label}</strong>
+                <small>{hotkeyLabel}</small>
+                <i aria-hidden="true" />
               </span>
             );
           })}
         </div>
+      </div>
+
+      <div className="leaderboard-summary-card leaderboard-summary-compact burn-summary">
+        <span>Burn</span>
+        <strong>{formatPercent(burnPercent, 2)}</strong>
       </div>
 
       <div className={`leaderboard-summary-card source-summary${meta.stale ? " source-summary-stale" : ""}`}>
@@ -711,6 +689,18 @@ function getValidatorMetricForColumn(row: MinerRow, index: number) {
 
 function getValidatorHealthForSlot(validatorHealth: ValidatorHealth[], index: number) {
   return validatorHealth.find((validator) => validator.slot === index + 1);
+}
+
+function getValidatorMetricFromRows(rows: MinerRow[], index: number) {
+  for (const row of rows) {
+    const metric = getValidatorMetricForColumn(row, index);
+
+    if (metric && (metric.uid !== null || (metric.hotkey && metric.hotkey !== "-"))) {
+      return metric;
+    }
+  }
+
+  return undefined;
 }
 
 function getCohortTone(group: string | null | undefined) {
@@ -1001,132 +991,191 @@ function MinerValidatorDetails({ row }: { row: MinerRow }) {
         </div>
       </div>
 
-      <div className="miner-summary-grid">
-        <div className="miner-summary-item miner-summary-important miner-summary-priority">
-          <span>Loss</span>
-          <strong title={row.loss === null ? undefined : String(row.loss)}>
-            {formatLeaderboardMetricNumber(row.loss, 6)}
-          </strong>
+      <details className="miner-collapse miner-current-collapse">
+        <summary className="miner-collapse-summary">
+          <ChevronRight size={14} />
+          <span>Current scores</span>
+          <strong>Main scores</strong>
+        </summary>
+        <div className="miner-summary-grid">
+          <div className="miner-summary-item miner-summary-important miner-summary-priority">
+            <span>Loss</span>
+            <strong title={row.loss === null ? undefined : String(row.loss)}>
+              {formatLeaderboardMetricNumber(row.loss, 6)}
+            </strong>
+          </div>
+          <div className="miner-summary-item miner-summary-important miner-summary-priority">
+            <span>Delta</span>
+            <strong>{formatLeaderboardMetricNumber(row.deltaLoss, 6)}</strong>
+          </div>
+          <div className="miner-summary-item miner-summary-important miner-summary-priority">
+            <span>Score</span>
+            <strong>{renderAggregateScoreMetric(row, 6)}</strong>
+          </div>
+          <div className="miner-summary-item miner-summary-important miner-summary-priority">
+            <span>Weight</span>
+            <strong title={row.weight === null ? undefined : String(row.weight)}>
+              {formatLeaderboardMetricNumber(row.weight, 4)}
+            </strong>
+          </div>
+          <div className="miner-summary-item">
+            <span>Last commit</span>
+            <strong title={row.lastObservedCommitBlock === null ? undefined : String(row.lastObservedCommitBlock)}>
+              {formatBlock(row.lastObservedCommitBlock)}
+            </strong>
+          </div>
+          <div className="miner-summary-item">
+            <span>Commit lag</span>
+            <strong title={row.lastObservedCommitBlockLag === null ? undefined : String(row.lastObservedCommitBlockLag)}>
+              {formatCommitLag(row.lastObservedCommitBlockLag)}
+            </strong>
+          </div>
+          <div className="miner-summary-item">
+            <span>Commit status</span>
+            <strong>
+              <span className={`commit-pill commit-${getCommitTone(row.committedRecently)}`}>
+                {formatCommitFreshness(row.committedRecently)}
+              </span>
+            </strong>
+          </div>
+          <div className="miner-summary-item">
+            <span>Group</span>
+            <strong>
+              <CohortGroupBadge row={row} />
+            </strong>
+          </div>
         </div>
-        <div className="miner-summary-item miner-summary-important miner-summary-priority">
-          <span>Delta</span>
-          <strong>{formatLeaderboardMetricNumber(row.deltaLoss, 6)}</strong>
-        </div>
-        <div className="miner-summary-item miner-summary-important miner-summary-priority">
-          <span>Score</span>
-          <strong>{renderAggregateScoreMetric(row, 6)}</strong>
-        </div>
-        <div className="miner-summary-item miner-summary-important miner-summary-priority">
-          <span>Weight</span>
-          <strong title={row.weight === null ? undefined : String(row.weight)}>
-            {formatLeaderboardMetricNumber(row.weight, 4)}
-          </strong>
-        </div>
-        <div className="miner-summary-item">
-          <span>Last commit</span>
-          <strong title={row.lastObservedCommitBlock === null ? undefined : String(row.lastObservedCommitBlock)}>
-            {formatBlock(row.lastObservedCommitBlock)}
-          </strong>
-        </div>
-        <div className="miner-summary-item">
-          <span>Commit lag</span>
-          <strong title={row.lastObservedCommitBlockLag === null ? undefined : String(row.lastObservedCommitBlockLag)}>
-            {formatCommitLag(row.lastObservedCommitBlockLag)}
-          </strong>
-        </div>
-        <div className="miner-summary-item">
-          <span>Commit status</span>
-          <strong>
-            <span className={`commit-pill commit-${getCommitTone(row.committedRecently)}`}>
-              {formatCommitFreshness(row.committedRecently)}
-            </span>
-          </strong>
-        </div>
-        <div className="miner-summary-item">
-          <span>Group</span>
-          <strong>
-            <CohortGroupBadge row={row} />
-          </strong>
-        </div>
-      </div>
+      </details>
 
-      <div className="validator-detail-frame">
-        <div className="validator-detail-scroll">
-          <table className="validator-detail-table" aria-label={`Validator metrics for UID ${row.uid}`}>
-            <thead>
-              <tr>
-                <th>Validator</th>
-                <th>Role</th>
-                <th>Rank</th>
-                <th>Loss</th>
-                <th>Score</th>
-                <th>Weight</th>
-                <th>Status</th>
-                <th>Chain UID</th>
-                <th>Eval</th>
-                <th>Commit</th>
-                <th>Block</th>
-              </tr>
-            </thead>
-            <tbody>
-              {row.validatorMetrics.length ? (
-                row.validatorMetrics.map((metric, index) => {
-                  const validatorHotkeyUrl = getHotkeyUrl(metric.hotkey);
+      <MinerScoreHistory row={row} />
+    </div>
+  );
+}
+
+type ScoreHistoryValidator = MinerRow["scoreHistory"][number]["validators"][number];
+type ScoreHistoryDisplayRound = Omit<MinerRow["scoreHistory"][number], "round"> & {
+  round: number | null;
+  current: boolean;
+};
+
+function getCurrentScoreHistoryRound(row: MinerRow): ScoreHistoryDisplayRound {
+  return {
+    round: null,
+    rank: row.rank,
+    phaseStartedAtBlock: null,
+    fetchedAt: "",
+    current: true,
+    validators: row.validatorMetrics.map((metric) => ({
+      validatorKey: `${metric.slot ?? ""}::${metric.uid ?? ""}::${metric.label}`,
+      label: metric.label,
+      slot: metric.slot,
+      uid: metric.uid,
+      rank: metric.rank,
+      rankTotal: metric.rankTotal,
+      valLoss: metric.valLoss,
+      score: metric.score,
+      weightSubmitted: metric.weightSubmitted,
+      evalStatusLabel: metric.evalStatusLabel,
+      extractedAtBlock: metric.extractedAtBlock
+    }))
+  };
+}
+
+function MinerScoreHistory({ row }: { row: MinerRow }) {
+  const savedHistory: ScoreHistoryDisplayRound[] = row.scoreHistory.slice(-8).map((historyRound) => ({
+    ...historyRound,
+    current: false
+  }));
+  const history = [...savedHistory, getCurrentScoreHistoryRound(row)];
+
+  return (
+    <details className="miner-collapse score-history-frame">
+      <summary className="miner-collapse-summary">
+        <ChevronRight size={14} />
+        <span>History</span>
+        <strong>{savedHistory.length ? `${savedHistory.length} saved + current` : "Current leaderboard"}</strong>
+      </summary>
+      <div className="score-history-scroll">
+        <table className="score-history-table" aria-label={`8-round validator score history and current leaderboard for UID ${row.uid}`}>
+          <thead>
+            <tr>
+              <th>Round</th>
+              <th>Rank</th>
+              {VALIDATOR_COLUMNS.map((index) => (
+                <th key={`score-history-validator-${row.uid}-${index}`}>V{index + 1}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((historyRound) => (
+              <tr className={historyRound.current ? "score-history-current-row" : undefined} key={`${row.uid}-history-round-${historyRound.current ? "current" : historyRound.round}-${historyRound.phaseStartedAtBlock ?? "phase"}`}>
+                <td className="score-history-round-cell" title={historyRound.fetchedAt ? `Fetched ${new Date(historyRound.fetchedAt).toLocaleString()}` : "Current leaderboard data"}>
+                  <strong>{historyRound.current ? "Current" : formatRawInteger(historyRound.round)}</strong>
+                  <span>{historyRound.current ? "leaderboard" : historyRound.phaseStartedAtBlock === null ? "start -" : `start ${formatBlock(historyRound.phaseStartedAtBlock)}`}</span>
+                </td>
+                <td className="score-history-rank-cell">{formatInteger(historyRound.rank)}</td>
+                {VALIDATOR_COLUMNS.map((index) => {
+                  const validator = getHistoryValidatorForColumn(historyRound, index);
 
                   return (
-                    <tr key={`${metric.label}-${metric.uid ?? "uid"}-${metric.slot ?? "slot"}-${index}`}>
-                      <td>
-                        <div className="validator-identity">
-                          <strong>{metric.label}</strong>
-                          {validatorHotkeyUrl ? (
-                            <a className="table-link" href={validatorHotkeyUrl} target="_blank" rel="noreferrer" title={metric.hotkey}>
-                              {shortText(metric.hotkey, 8, 6)}
-                            </a>
-                          ) : (
-                            <span title={metric.hotkey}>{shortText(metric.hotkey, 8, 6)}</span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`detail-role-badge ${getRoleBadgeClassName(metric.assignmentRole)}`}>
-                          {formatAssignmentRole(metric.assignmentRole)}
-                        </span>
-                      </td>
-                      <td title={metric.rank === null ? undefined : `${formatValidatorRank(metric)} in validator ${metric.label}`}>
-                        {formatValidatorRank(metric)}
-                      </td>
-                      <td className={getMetricClassName(metric.evalStatusLabel)} title={shouldDisplayEvalStatusAsMetric(metric.evalStatusLabel) ? formatShortEvalStatus(metric.evalStatusLabel) : metric.valLoss === null ? undefined : String(metric.valLoss)}>{renderMetricByEvalStatus(metric.valLoss, metric.evalStatusLabel, 6)}</td>
-                      <td className={getMetricClassName(metric.evalStatusLabel)} title={formatMetricByEvalStatus(metric.score, metric.evalStatusLabel, 6)}>{renderMetricByEvalStatus(metric.score, metric.evalStatusLabel, 6)}</td>
-                      <td className={getMetricClassName(metric.evalStatusLabel)} title={shouldDisplayEvalStatusAsMetric(metric.evalStatusLabel) ? formatShortEvalStatus(metric.evalStatusLabel) : metric.weightSubmitted === null ? undefined : String(metric.weightSubmitted)}>{renderMetricByEvalStatus(metric.weightSubmitted, metric.evalStatusLabel, 4)}</td>
-                      <td>
-                        <span className={`detail-status-badge ${getValidatorStatusClassName(metric.validatorStatus)}`}>
-                          {formatValidatorStatus(metric.validatorStatus)}
-                        </span>
-                      </td>
-                      <td>{formatInteger(metric.chainUid)}</td>
-                      <td title={metric.failureReasons.length ? metric.failureReasons.join(", ") : undefined}>
-                        <span className={`detail-eval-badge ${getEvalBadgeClassName(metric.evalStatusLabel)}`}>
-                          {formatEvalStatus(metric.evalStatusLabel)}
-                        </span>
-                      </td>
-                      <td title={metric.lastObservedCommitBlock === null ? "No commit block reported" : `Last observed commit block ${formatBlock(metric.lastObservedCommitBlock)}`}>
-                        <span className="validator-block-number">{formatBlock(metric.lastObservedCommitBlock)}</span>
-                      </td>
-                      <td title={formatValidatorBlockTitle(metric)}>
-                        <span className="validator-block-number">{formatValidatorBlock(metric)}</span>
-                      </td>
-                    </tr>
+                    <td key={`${row.uid}-history-round-${historyRound.current ? "current" : historyRound.round}-validator-${index}`} title={formatScoreHistoryCellTitle(historyRound, validator)}>
+                      <HistoryValidatorCell validator={validator} />
+                    </td>
                   );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={11}>No validator metrics reported for this miner.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </div>
+    </details>
+  );
+}
+
+function getHistoryValidatorForColumn(historyRound: ScoreHistoryDisplayRound, index: number) {
+  const hasSlots = historyRound.validators.some((validator) => validator.slot !== null);
+  return hasSlots ? historyRound.validators.find((validator) => validator.slot === index + 1) : historyRound.validators[index];
+}
+
+function formatHistoryValidatorRank(validator: ScoreHistoryValidator | undefined) {
+  if (!validator || validator.rank === null) {
+    return EMPTY_METRIC_VALUE;
+  }
+
+  return validator.rankTotal === null ? formatInteger(validator.rank) : `${formatInteger(validator.rank)} / ${formatInteger(validator.rankTotal)}`;
+}
+
+function formatScoreHistoryCellTitle(historyRound: ScoreHistoryDisplayRound, validator: ScoreHistoryValidator | undefined) {
+  if (!validator) {
+    return `${historyRound.current ? "Current leaderboard" : `Round ${formatRawInteger(historyRound.round)}`}: no validator score recorded.`;
+  }
+
+  return [
+    historyRound.current ? "Current leaderboard" : `Round ${formatRawInteger(historyRound.round)}`,
+    historyRound.phaseStartedAtBlock === null ? null : `Distribute start ${formatBlock(historyRound.phaseStartedAtBlock)}`,
+    validator.label,
+    `rank ${formatHistoryValidatorRank(validator)}`,
+    `loss ${formatLeaderboardMetricNumber(validator.valLoss, 6)}`,
+    `weight ${formatLeaderboardMetricNumber(validator.weightSubmitted, 4)}`,
+    `eval ${formatEvalStatus(validator.evalStatusLabel)}`,
+    validator.extractedAtBlock === null ? null : `block ${formatBlock(validator.extractedAtBlock)}`,
+    historyRound.fetchedAt ? `fetched ${new Date(historyRound.fetchedAt).toLocaleString()}` : null
+  ].filter(Boolean).join(" | ");
+}
+
+function formatRawInteger(value: number | null | undefined) {
+  return value === null || value === undefined || !Number.isFinite(value)
+    ? EMPTY_METRIC_VALUE
+    : Intl.NumberFormat("en", { maximumFractionDigits: 0, useGrouping: false }).format(value);
+}
+
+function HistoryValidatorCell({ validator }: { validator: ScoreHistoryValidator | undefined }) {
+  return (
+    <span className="validator-mini-card score-history-mini-card">
+      <strong className="validator-mini-rank-metric"><span>R</span>{formatHistoryValidatorRank(validator)}</strong>
+      <strong className="validator-mini-loss-metric"><span>L</span>{validator ? formatLeaderboardMetricNumber(validator.valLoss, 4) : EMPTY_METRIC_VALUE}</strong>
+      <small className="validator-mini-weight-metric"><span>W</span>{validator ? formatLeaderboardMetricNumber(validator.weightSubmitted, 4) : EMPTY_METRIC_VALUE}</small>
+      <small className="validator-mini-eval-metric"><span>E</span>{validator ? formatShortEvalStatus(validator.evalStatusLabel) : EMPTY_METRIC_VALUE}</small>
+    </span>
   );
 }

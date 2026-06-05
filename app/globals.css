@@ -720,9 +720,9 @@ h1 {
 
 .work-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(420px, 1.15fr);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    "phase schedule";
+    "phase";
   gap: var(--gap);
   margin-bottom: var(--gap);
   align-items: stretch;
@@ -776,8 +776,8 @@ h1 {
 
 .progress-track {
   position: relative;
-  height: 12px;
-  margin: 26px 0 28px;
+  height: 8px;
+  margin: 24px 0 34px;
   border: 1px solid var(--metric-track-border);
   border-radius: 999px;
   background: var(--progress-bg);
@@ -793,13 +793,28 @@ h1 {
 .progress-cursor {
   position: absolute;
   top: calc(100% + 6px);
+  display: grid;
+  gap: 2px;
+  justify-items: center;
   transform: translateX(-50%);
   color: var(--muted);
-  font-size: var(--font-2xs);
-  font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   white-space: nowrap;
+}
+
+.progress-cursor strong {
+  color: var(--heading);
+  font-size: var(--font-2xs);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.progress-cursor small {
+  color: var(--muted);
+  font-size: var(--font-3xs);
+  font-weight: 900;
+  line-height: 1;
 }
 
 .progress-cursor::before {
@@ -808,7 +823,7 @@ h1 {
   left: 50%;
   bottom: calc(100% + 2px);
   width: 1px;
-  height: 7px;
+  height: 5px;
   transform: translateX(-50%);
   background: var(--cyan);
 }
@@ -823,6 +838,178 @@ h1 {
   font-variant-numeric: tabular-nums;
   line-height: 1;
   white-space: nowrap;
+}
+
+.phase-window {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 18px;
+  overflow: visible;
+}
+
+.phase-window-card {
+  --phase-card-scale: 0.94;
+  min-width: 0;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.024);
+  color: var(--muted);
+  transform: scale(var(--phase-card-scale));
+  transform-origin: center;
+  transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, opacity 0.22s ease;
+}
+
+.phase-window-card span,
+.phase-window-card small {
+  color: var(--muted);
+  font-size: var(--font-3xs);
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.phase-window-card strong,
+.phase-window-card em {
+  min-width: 0;
+  color: var(--table-text);
+  font-style: normal;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phase-window-card > strong {
+  font-size: var(--font-md);
+  line-height: 1.12;
+}
+
+.phase-window-next-3 {
+  --phase-card-scale: 0.9;
+  opacity: 0.62;
+}
+
+.phase-window-prev-1,
+.phase-window-next-1,
+.phase-window-next-2 {
+  --phase-card-scale: 0.97;
+  opacity: 0.82;
+}
+
+.phase-window-current {
+  --phase-card-scale: 1.08;
+  min-height: 126px;
+  border-color: rgba(70, 215, 210, 0.34);
+  background: linear-gradient(180deg, rgba(70, 215, 210, 0.08), rgba(90, 168, 255, 0.035)), var(--panel-soft);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+  opacity: 1;
+  z-index: 1;
+}
+
+.phase-window-current > strong {
+  color: var(--heading);
+  font-size: var(--font-xl);
+}
+
+.phase-window-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.phase-window-meta em {
+  color: var(--cyan);
+  font-size: var(--font-sm);
+}
+
+.phase-window-blocks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  min-width: 0;
+}
+
+.phase-window-block {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 6px 6px 5px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 7px;
+  background: rgba(3, 9, 18, 0.24);
+  text-transform: none;
+}
+
+.phase-window-block small {
+  color: var(--muted);
+  font-size: var(--font-3xs);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.phase-window-block strong {
+  color: var(--heading);
+  font-size: var(--font-3xs);
+  font-weight: 900;
+  line-height: 1;
+  text-align: right;
+}
+
+.phase-window-moving .phase-window-card {
+  animation: phase-slide-left 0.72s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.phase-window-moving .phase-window-current {
+  animation-name: phase-slide-current;
+}
+
+.phase-window-moving .phase-window-prev-1 {
+  animation-name: phase-slide-prev;
+}
+
+@keyframes phase-slide-left {
+  from {
+    opacity: 0.35;
+    transform: translateX(28px) scale(var(--phase-card-scale));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(var(--phase-card-scale));
+  }
+}
+
+@keyframes phase-slide-current {
+  from {
+    opacity: 0.5;
+    transform: translateX(30px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1.08);
+  }
+}
+
+@keyframes phase-slide-prev {
+  from {
+    opacity: 0.45;
+    transform: translateX(24px) scale(0.9);
+  }
+  to {
+    opacity: 0.82;
+    transform: translateX(0) scale(0.97);
+  }
 }
 
 .phase-stats,
@@ -3271,8 +3458,7 @@ tbody tr:last-child td {
   .work-grid {
     grid-template-columns: 1fr;
     grid-template-areas:
-      "phase"
-      "schedule";
+      "phase";
   }
 
   .phase-panel,
@@ -3283,6 +3469,19 @@ tbody tr:last-child td {
 
   .phase-stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .phase-window {
+    gap: 7px;
+  }
+
+  .phase-window-card {
+    min-height: 84px;
+    padding: 10px;
+  }
+
+  .phase-window-current {
+    min-height: 122px;
   }
 
   .round-stats {
@@ -3391,6 +3590,32 @@ tbody tr:last-child td {
   .phase-stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
+  }
+
+  .phase-window {
+    grid-template-columns: repeat(5, minmax(116px, 1fr));
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 4px 2px 6px;
+    margin-right: -2px;
+    margin-left: -2px;
+  }
+
+  .phase-window-card {
+    min-height: 78px;
+    padding: 9px;
+  }
+
+  .phase-window-card > strong {
+    font-size: var(--font-sm);
+  }
+
+  .phase-window-current {
+    min-height: 116px;
+  }
+
+  .phase-window-current > strong {
+    font-size: var(--font-md);
   }
 
   .overview-grid,

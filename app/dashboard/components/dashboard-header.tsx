@@ -8,6 +8,8 @@ type DashboardHeaderProps = {
   status: DashboardStatus;
   theme: Theme;
   loading: boolean;
+  title?: string;
+  subtitle?: string;
   onRefresh: () => void;
   onThemeToggle: () => void;
 };
@@ -18,6 +20,8 @@ export function DashboardHeader({
   status,
   theme,
   loading,
+  title = "Connito Leaderboard",
+  subtitle,
   onRefresh,
   onThemeToggle
 }: DashboardHeaderProps) {
@@ -26,7 +30,8 @@ export function DashboardHeader({
       <div className="brand-block">
         <img className="brand-logo" src="/logo.svg" alt="" width="48" height="48" />
         <div className="brand-copy">
-          <h1>Connito Leaderboard <span>(SN{netuid})</span></h1>
+          <h1>{title} <span>(SN{netuid})</span></h1>
+          {subtitle ? <p>{subtitle}</p> : null}
         </div>
       </div>
 

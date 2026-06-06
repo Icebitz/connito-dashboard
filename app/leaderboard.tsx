@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardHeader } from "./dashboard/components/dashboard-header";
 import { LeaderboardSection } from "./dashboard/components/leaderboard-section";
 import { MetricChartsSection } from "./dashboard/components/metric-charts-section";
+import { MinerHistoryTab } from "./dashboard/components/miner-history-tab";
 import { OverviewGrid } from "./dashboard/components/overview-grid";
 import { PhasePanels, RoundHealthPanel } from "./dashboard/components/phase-panels";
 import { RoundTrendSection } from "./dashboard/components/round-trend-section";
@@ -16,6 +17,8 @@ import type { ApiResponse, DashboardStatus, MinerRow, Theme } from "./dashboard/
 export default function Leaderboard() {
   const [leaderboard, setLeaderboard] = useState<ApiResponse | null>(null);
   const [query, setQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "history">("dashboard");
+  const [historyMinerUids, setHistoryMinerUids] = useState<string[]>([]);
   const [theme, setTheme] = useState<Theme>("dark");
   const [themeReady, setThemeReady] = useState(false);
   const [selectedMinerKey, setSelectedMinerKey] = useState<string | null>(null);
@@ -103,6 +106,11 @@ export default function Leaderboard() {
     setSelectedMinerKey((current) => current === rowKey ? null : rowKey);
   }, []);
 
+  const openMinerHistory = useCallback((uids: string[]) => {
+    setHistoryMinerUids(uids);
+    setActiveTab("history");
+  }, []);
+
   const scoredPercent = model.round.roster && model.round.roster > 0
     ? Math.max(0, Math.min(100, ((model.round.scored ?? 0) / model.round.roster) * 100))
     : 0;
@@ -130,26 +138,55 @@ export default function Leaderboard() {
         onThemeToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")}
       />
 
-      <OverviewGrid model={model} syncCounter={syncCounter} loading={firstLoad} />
-      <PhasePanels phase={model.phase} loading={firstLoad} loadingUpcoming={firstLoad} />
-      <section className="round-row" aria-label="Round loss and health">
-        <RoundTrendSection points={model.round.history} loading={firstLoad} />
-        <RoundHealthPanel round={model.round} scoredPercent={scoredPercent} loading={firstLoad} />
-      </section>
-      <MetricChartsSection rows={model.rows} />
-      <LeaderboardSection
-        allRows={model.rows}
-        filteredRows={filteredRows}
-        query={query}
-        selectedMinerKey={selectedMinerKey}
-        burnPercent={model.metrics.burnPercent}
-        phase={model.phase}
-        theme={theme}
-        meta={model.meta}
-        onQueryChange={setQuery}
-        onThemeToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")}
-        onToggleMinerDetails={toggleMinerDetails}
-      />
+      <nav className="dashboard-tabs" aria-label="Dashboard views">
+        <button
+          type="button"
+          className={activeTab === "dashboard" ? "dashboard-tab-active" : undefined}
+          aria-pressed={activeTab === "dashboard"}
+          onClick={() => setActiveTab("dashboard")}
+        >
+          Dashboard
+        </button>
+        <button
+          type="button"
+          className={activeTab === "history" ? "dashboard-tab-active" : undefined}
+          aria-pressed={activeTab === "history"}
+          onClick={() => setActiveTab("history")}
+        >
+          History
+        </button>
+      </nav>
+
+      {activeTab === "dashboard" ? (
+        <>
+          <OverviewGrid model={model} syncCounter={syncCounter} loading={firstLoad} />
+          <PhasePanels phase={model.phase} loading={firstLoad} loadingUpcoming={firstLoad} />
+          <section className="round-row" aria-label="Round loss and health">
+            <RoundTrendSection points={model.round.history} loading={firstLoad} />
+            <RoundHealthPanel round={model.round} scoredPercent={scoredPercent} loading={firstLoad} />
+          </section>
+          <MetricChartsSection rows={model.rows} />
+          <LeaderboardSection
+            allRows={model.rows}
+            filteredRows={filteredRows}
+            query={query}
+            selectedMinerKey={selectedMinerKey}
+            burnPercent={model.metrics.burnPercent}
+            phase={model.phase}
+            theme={theme}
+            meta={model.meta}
+            onQueryChange={setQuery}
+            onThemeToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")}
+            onOpenHistory={openMinerHistory}
+            onToggleMinerDetails={toggleMinerDetails}
+          />
+        </>
+      ) : (
+        <>
+          <PhasePanels phase={model.phase} loading={firstLoad} loadingUpcoming={firstLoad} />
+          <MinerHistoryTab selectedMinerUids={historyMinerUids} />
+        </>
+      )}
       <footer className="site-footer">
         <div>
           <strong>Connito Subnet {model.subnet.netuid}</strong>

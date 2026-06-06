@@ -1,4 +1,4 @@
-import { AlertTriangle, ChevronLeft, ChevronRight, Eye, EyeOff, Maximize2, Minimize2, Moon, Search, ShieldCheck, Sun, X } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Eye, EyeOff, History, Maximize2, Minimize2, Moon, Search, ShieldCheck, Sun, X } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
@@ -39,6 +39,7 @@ type LeaderboardSectionProps = {
   meta: DashboardModel["meta"];
   onQueryChange: (value: string) => void;
   onThemeToggle: () => void;
+  onOpenHistory: (uids: string[]) => void;
   onToggleMinerDetails: (row: MinerRow) => void;
 };
 
@@ -179,6 +180,7 @@ export function LeaderboardSection({
   meta,
   onQueryChange,
   onThemeToggle,
+  onOpenHistory,
   onToggleMinerDetails
 }: LeaderboardSectionProps) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -314,6 +316,18 @@ export function LeaderboardSection({
                 onClick={() => setShowViewListOnly((current) => !current)}
               >
                 {showViewListOnly ? <EyeOff size={13} /> : <Eye size={13} />}
+              </button>
+              <button
+                type="button"
+                className="view-list-history-button"
+                aria-label="Open history for selected miners"
+                disabled={!viewListUids.length}
+                title={viewListUids.length ? `Open history for ${viewListUids.length} selected miner${viewListUids.length === 1 ? "" : "s"}` : "Select miners to view history"}
+                onClick={() => {
+                  onOpenHistory(viewListUids);
+                }}
+              >
+                <History size={13} />
               </button>
             </div>
           </div>

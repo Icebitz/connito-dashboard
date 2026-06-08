@@ -1048,6 +1048,26 @@ h1 {
   background: linear-gradient(90deg, var(--cyan), var(--green));
 }
 
+.progress-track:not(.progress-track-skeleton) > i,
+.leaderboard-fullscreen-progress-track > i {
+  position: relative;
+  overflow: hidden;
+  transform-origin: left center;
+  transition: width 0.72s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: progress-fill-in 0.72s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: width, transform;
+}
+
+.progress-track:not(.progress-track-skeleton) > i::after,
+.leaderboard-fullscreen-progress-track > i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.44), transparent);
+  transform: translateX(-120%);
+  animation: progress-sheen 1.8s ease-in-out infinite;
+}
+
 .progress-cursor {
   position: absolute;
   top: calc(100% + 6px);
@@ -1059,6 +1079,7 @@ h1 {
   font-variant-numeric: tabular-nums;
   line-height: 1;
   white-space: nowrap;
+  transition: left 0.72s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .progress-cursor strong {
@@ -3776,6 +3797,41 @@ tbody tr:last-child td {
 
   100% {
     background-position: -120% 0;
+  }
+}
+
+@keyframes progress-fill-in {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes progress-sheen {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  45%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-track:not(.progress-track-skeleton) > i,
+  .leaderboard-fullscreen-progress-track > i,
+  .progress-track:not(.progress-track-skeleton) > i::after,
+  .leaderboard-fullscreen-progress-track > i::after {
+    animation: none;
+    transition: none;
+  }
+
+  .progress-cursor {
+    transition: none;
   }
 }
 

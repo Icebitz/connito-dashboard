@@ -384,6 +384,75 @@ h1 {
   gap: 14px;
 }
 
+.miner-history-pager {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 30px minmax(0, auto) 30px;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 7px;
+  margin-top: 5px;
+}
+
+.miner-history-page-arrow,
+.miner-history-page-button {
+  min-width: 0;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: var(--font-2xs);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.miner-history-page-arrow {
+  width: 30px;
+  padding: 0;
+  border-radius: 6px;
+}
+
+.miner-history-page-list {
+  min-width: 0;
+  max-width: min(520px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.miner-history-page-button {
+  flex: 0 0 auto;
+  min-width: 42px;
+  padding: 0 11px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.miner-history-page-arrow:not(:disabled):hover,
+.miner-history-page-button:hover {
+  border-color: rgba(70, 215, 210, 0.44);
+  background: rgba(70, 215, 210, 0.1);
+  color: var(--cyan);
+}
+
+.miner-history-page-active,
+.miner-history-page-active:hover {
+  border-color: rgba(73, 208, 139, 0.48);
+  background: rgba(73, 208, 139, 0.12);
+  color: var(--green);
+}
+
+.miner-history-page-arrow:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
 .miner-history-panel-top {
   display: flex;
   align-items: center;
@@ -420,11 +489,12 @@ h1 {
 .miner-history-identity strong {
   color: var(--heading);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  line-height: 1;
 }
 
 .miner-history-identity strong,
 .miner-history-identity span {
-  min-height: 22px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   padding: 0 8px;
@@ -436,6 +506,7 @@ h1 {
 .miner-history-identity span {
   color: var(--blue);
   font-weight: 900;
+  line-height: 1;
   text-transform: uppercase;
 }
 
@@ -458,8 +529,9 @@ h1 {
 }
 
 .miner-history-panel-actions button {
-  min-height: 28px;
+  height: 28px;
   padding: 0 9px;
+  line-height: 1;
 }
 
 .miner-history-meta-strip {
@@ -473,7 +545,7 @@ h1 {
 
 .miner-history-meta-item {
   min-width: 0;
-  min-height: 26px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -497,6 +569,7 @@ h1 {
   font-style: normal;
   font-weight: 900;
   letter-spacing: 0;
+  line-height: 1;
   text-transform: uppercase;
 }
 
@@ -505,6 +578,7 @@ h1 {
   font-size: var(--font-2xs);
   font-weight: 900;
   font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .miner-history-refresh-button {
@@ -3557,12 +3631,12 @@ tbody td.leaderboard-details-cell {
 }
 
 .miner-history-table {
-  min-width: 760px;
+  min-width: 1040px;
   font-size: var(--font-3xs);
 }
 
 .miner-history-table thead th:first-child {
-  width: 96px;
+  width: 176px;
 }
 
 .miner-history-table thead th:nth-child(2) {
@@ -3570,7 +3644,7 @@ tbody td.leaderboard-details-cell {
 }
 
 .miner-history-table thead th:not(:first-child) {
-  width: calc((100% - 96px) / 5);
+  width: calc((100% - 176px) / 5);
 }
 
 .miner-history-table thead th {
@@ -3582,10 +3656,21 @@ tbody td.leaderboard-details-cell {
   font-size: 10px;
 }
 
+.miner-history-table thead th:nth-child(n + 2),
+.miner-history-table tbody td:nth-child(n + 2) {
+  border-left: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.miner-history-table thead th:nth-child(2),
+.miner-history-table tbody td:nth-child(2) {
+  border-left-color: rgba(148, 163, 184, 0.26);
+}
+
 .miner-history-table tbody td {
-  height: 38px;
-  padding: 1px 6px;
+  height: 34px;
+  padding: 1px 8px;
   border-bottom-color: var(--table-row-border);
+  vertical-align: middle;
 }
 
 .miner-history-table tbody tr:hover {
@@ -3597,24 +3682,51 @@ tbody td.leaderboard-details-cell {
   background: var(--table-even);
 }
 
+.miner-history-time-cell span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--heading);
+  font-size: var(--font-2xs);
+  font-weight: 900;
+  line-height: 1;
+}
+
 .miner-history-mini-card {
-  min-height: 34px;
-  gap: 0 5px;
-  padding: 1px 4px;
+  min-height: 28px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  padding: 0 2px;
 }
 
 .miner-history-mini-card .validator-mini-rank-metric,
 .miner-history-mini-card .validator-mini-loss-metric,
 .miner-history-mini-card .validator-mini-weight-metric,
 .miner-history-mini-card .validator-mini-eval-metric {
-  min-height: 14px;
+  min-height: 18px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
   padding: 0 2px;
   font-size: 10px;
+  line-height: 1;
+  text-align: center;
+}
+
+.miner-history-mini-card .validator-mini-loss-metric {
+  color: var(--blue);
 }
 
 .miner-history-mini-card .validator-mini-weight-metric,
 .miner-history-mini-card .validator-mini-eval-metric {
-  color: var(--table-text);
+  color: var(--cyan);
+}
+
+.miner-history-mini-card .validator-mini-eval-metric {
+  color: var(--green);
 }
 
 .validator-identity {
@@ -4265,6 +4377,16 @@ tbody tr:last-child td {
 
   .miner-history-search {
     width: 100%;
+  }
+
+  .miner-history-pager {
+    width: 100%;
+    grid-template-columns: 30px minmax(0, 1fr) 30px;
+    justify-content: stretch;
+  }
+
+  .miner-history-page-list {
+    justify-content: flex-start;
   }
 
   .miner-history-panel-actions {

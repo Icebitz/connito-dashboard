@@ -206,6 +206,7 @@ function HistoryMeta({ label, value }: { label: string; value: string }) {
 function MinerHistoryPager({ uids, activeIndex, onSelect }: { uids: string[]; activeIndex: number; onSelect: (index: number) => void }) {
   const previousDisabled = activeIndex <= 0;
   const nextDisabled = activeIndex >= uids.length - 1;
+  const pagerItems = getMinerHistoryPagerItems(uids, activeIndex);
 
   return (
     <nav className="miner-history-pager" aria-label="Miner history UID pages">
@@ -220,17 +221,21 @@ function MinerHistoryPager({ uids, activeIndex, onSelect }: { uids: string[]; ac
         <ChevronLeft size={15} />
       </button>
       <div className="miner-history-page-list">
-        {uids.map((uid, index) => (
-          <button
-            type="button"
-            className={index === activeIndex ? "miner-history-page-button miner-history-page-active" : "miner-history-page-button"}
-            key={`miner-history-page-${uid}-${index}`}
-            onClick={() => onSelect(index)}
-            aria-current={index === activeIndex ? "page" : undefined}
-            title={`Show history for UID ${uid}`}
-          >
-            {uid}
-          </button>
+        {pagerItems.map((item) => (
+          item.type === "ellipsis" ? (
+            <span className="miner-history-page-ellipsis" key={item.key} aria-hidden="true">...</span>
+          ) : (
+            <button
+              type="button"
+              className={item.index === activeIndex ? "miner-history-page-button miner-history-page-active" : "miner-history-page-button"}
+              key={`miner-history-page-${item.uid}-${item.index}`}
+              onClick={() => onSelect(item.index)}
+              aria-current={item.index === activeIndex ? "page" : undefined}
+              title={`Show history for UID ${item.uid}`}
+            >
+              {item.uid}
+            </button>
+          )
         ))}
       </div>
       <button
@@ -245,6 +250,42 @@ function MinerHistoryPager({ uids, activeIndex, onSelect }: { uids: string[]; ac
       </button>
     </nav>
   );
+}
+
+function getMinerHistoryPagerItems(uids: string[], activeIndex: number) {
+  if (uids.length <= 9) {
+    return uids.map((uid, index) => ({ type: "page" as const, uid, index }));
+  }
+
+  const lastIndex = uids.length - 1;
+  const visibleIndexes = new Set<number>([0, lastIndex]);
+
+  if (activeIndex <= 3) {
+    for (let index = 0; index <= 4; index += 1) {
+      visibleIndexes.add(index);
+    }
+  } else if (activeIndex >= lastIndex - 3) {
+    for (let index = lastIndex - 4; index <= lastIndex; index += 1) {
+      visibleIndexes.add(index);
+    }
+  } else {
+    visibleIndexes.add(activeIndex - 1);
+    visibleIndexes.add(activeIndex);
+    visibleIndexes.add(activeIndex + 1);
+  }
+
+  const sortedIndexes = Array.from(visibleIndexes).filter((index) => index >= 0 && index <= lastIndex).sort((a, b) => a - b);
+  return sortedIndexes.flatMap((index, itemIndex) => {
+    const items: Array<{ type: "page"; uid: string; index: number } | { type: "ellipsis"; key: string }> = [];
+    const previousIndex = sortedIndexes[itemIndex - 1];
+
+    if (previousIndex !== undefined && index - previousIndex > 1) {
+      items.push({ type: "ellipsis", key: `ellipsis-${previousIndex}-${index}` });
+    }
+
+    items.push({ type: "page", uid: uids[index], index });
+    return items;
+  });
 }
 
 function MinerHistoryTable({ model, loading }: { model: MinerHistoryModel; loading: boolean }) {

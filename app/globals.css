@@ -386,9 +386,8 @@ h1 {
 
 .miner-history-pager {
   min-width: 0;
-  display: grid;
-  grid-template-columns: 30px minmax(0, auto) 30px;
-  justify-content: flex-start;
+  max-width: 100%;
+  display: inline-flex;
   align-items: center;
   gap: 7px;
   margin-top: 5px;
@@ -417,13 +416,18 @@ h1 {
 
 .miner-history-page-list {
   min-width: 0;
-  max-width: min(520px, 100%);
+  max-width: min(520px, calc(100vw - 120px));
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 6px;
   overflow-x: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+
+.miner-history-page-list::-webkit-scrollbar {
+  display: none;
 }
 
 .miner-history-page-button {
@@ -432,6 +436,18 @@ h1 {
   padding: 0 11px;
   border-radius: 6px;
   font-variant-numeric: tabular-nums;
+}
+
+.miner-history-page-ellipsis {
+  width: 26px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: var(--font-2xs);
+  font-weight: 900;
+  line-height: 1;
 }
 
 .miner-history-page-arrow:not(:disabled):hover,
@@ -4381,11 +4397,10 @@ tbody tr:last-child td {
 
   .miner-history-pager {
     width: 100%;
-    grid-template-columns: 30px minmax(0, 1fr) 30px;
-    justify-content: stretch;
   }
 
   .miner-history-page-list {
+    flex: 1 1 auto;
     justify-content: flex-start;
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VALIDATOR_COLUMNS } from "../constants";
@@ -53,6 +53,7 @@ export function MinerHistoryTab({ selectedMinerUids }: MinerHistoryTabProps) {
   const [activeMinerUids, setActiveMinerUids] = useState<string[]>(selectedMinerUids);
   const [minerInput, setMinerInput] = useState(selectedMinerUids.join(", "));
   const [histories, setHistories] = useState<MinerHistoryApiResponse[]>([]);
+  const [historyPageIndex, setHistoryPageIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -60,6 +61,8 @@ export function MinerHistoryTab({ selectedMinerUids }: MinerHistoryTabProps) {
   useEffect(() => {
     setActiveMinerUids(selectedMinerUids);
     setMinerInput(selectedMinerUids.join(", "));
+    setHistories([]);
+    setHistoryPageIndex(0);
   }, [selectedMinerUids]);
 
   useEffect(() => {
@@ -109,6 +112,11 @@ export function MinerHistoryTab({ selectedMinerUids }: MinerHistoryTabProps) {
   const latestFetchedAt = getLatestFetchedAt(historyModels);
   const fetchedAtMs = latestFetchedAt ? new Date(latestFetchedAt).getTime() : Number.NaN;
   const syncCounter = Number.isFinite(fetchedAtMs) ? `${formatDuration(nowMs - fetchedAtMs)} ago` : "-";
+  const pageUids = activeMinerUids.length ? activeMinerUids : historyModels.map((historyModel) => historyModel.minerUid);
+  const historyPageCount = pageUids.length;
+  const boundedHistoryPageIndex = historyPageCount ? Math.min(historyPageIndex, historyPageCount - 1) : 0;
+  const visibleHistoryModel = historyModels[boundedHistoryPageIndex] ?? (pageUids[boundedHistoryPageIndex] ? buildMinerHistoryModel(null, pageUids[boundedHistoryPageIndex]) : null);
+  const visibleHistoryUid = visibleHistoryModel?.minerUid ?? pageUids[boundedHistoryPageIndex] ?? "";
 
   return (
     <section className="miner-history-view">
@@ -120,6 +128,8 @@ export function MinerHistoryTab({ selectedMinerUids }: MinerHistoryTabProps) {
             event.preventDefault();
             const uids = getMinerUids(minerInput);
             setActiveMinerUids(uids);
+            setHistories([]);
+            setHistoryPageIndex(0);
             void load(uids);
           }}
         >
@@ -140,22 +150,27 @@ export function MinerHistoryTab({ selectedMinerUids }: MinerHistoryTabProps) {
       <Notice message={error} />
 
       <div className="miner-history-panels">
-        {historyModels.length ? historyModels.map((historyModel) => (
-          <section className="miner-history-panel" key={`miner-history-panel-${historyModel.minerUid}`}>
+        {historyPageCount ? (
+          <section className="miner-history-panel" key={`miner-history-panel-${visibleHistoryUid}`}>
             <div className="miner-history-panel-top">
               <div className="miner-history-title-block">
-                <SectionTitle eyebrow="Miner History" title={`UID ${historyModel.minerUid}`} />
+                <SectionTitle eyebrow="Miner History" />
+                <MinerHistoryPager
+                  uids={pageUids}
+                  activeIndex={boundedHistoryPageIndex}
+                  onSelect={setHistoryPageIndex}
+                />
                 <div className="miner-history-identity">
-                  <strong>{historyModel.hotkey ? shortText(historyModel.hotkey, 18, 8) : "Hotkey -"}</strong>
-                  <span>{historyModel.servedFrom ? `served from ${historyModel.servedFrom}` : "series history"}</span>
+                  <strong>{visibleHistoryModel?.hotkey ? shortText(visibleHistoryModel.hotkey, 18, 8) : "Hotkey -"}</strong>
+                  <span>{visibleHistoryModel?.servedFrom ? `served from ${visibleHistoryModel.servedFrom}` : "series history"}</span>
                 </div>
               </div>
               <div className="miner-history-panel-actions">
-                <div className="miner-history-meta-strip" aria-label={`History summary for UID ${historyModel.minerUid}`}>
-                  <HistoryMeta label="Points" value={formatNumber(historyModel.rows.length, 0)} />
-                  <HistoryMeta label="Step" value={historyModel.stepSeconds ? formatDuration(historyModel.stepSeconds * 1000) : "-"} />
-                  <HistoryMeta label="Oldest" value={historyModel.rows.length ? formatHistoryDate(historyModel.rows[historyModel.rows.length - 1].timestamp) : "-"} />
-                  <HistoryMeta label="Newest" value={historyModel.rows.length ? formatHistoryDate(historyModel.rows[0].timestamp) : "-"} />
+                <div className="miner-history-meta-strip" aria-label={`History summary for UID ${visibleHistoryUid}`}>
+                  <HistoryMeta label="Points" value={formatNumber(visibleHistoryModel?.rows.length ?? 0, 0)} />
+                  <HistoryMeta label="Step" value={visibleHistoryModel?.stepSeconds ? formatDuration(visibleHistoryModel.stepSeconds * 1000) : "-"} />
+                  <HistoryMeta label="Oldest" value={visibleHistoryModel?.rows.length ? formatHistoryDate(visibleHistoryModel.rows[visibleHistoryModel.rows.length - 1].timestamp) : "-"} />
+                  <HistoryMeta label="Newest" value={visibleHistoryModel?.rows.length ? formatHistoryDate(visibleHistoryModel.rows[0].timestamp) : "-"} />
                 </div>
                 <button type="button" className="miner-history-refresh-button" onClick={() => void load(activeMinerUids)} disabled={loading} title="Refresh miner history">
                   <RefreshCw size={15} className={loading ? "spin" : ""} />
@@ -164,9 +179,9 @@ export function MinerHistoryTab({ selectedMinerUids }: MinerHistoryTabProps) {
               </div>
             </div>
 
-            <MinerHistoryTable model={historyModel} loading={loading && !historyModels.length} />
+            <MinerHistoryTable model={visibleHistoryModel ?? buildMinerHistoryModel(null, pageUids[boundedHistoryPageIndex] ?? "")} loading={loading && !historyModels.length} />
           </section>
-        )) : (
+        ) : (
           <section className="miner-history-panel">
             <div className="miner-history-panel-top">
               <SectionTitle eyebrow="Miner History" title="No miners selected" />
@@ -185,6 +200,50 @@ function HistoryMeta({ label, value }: { label: string; value: string }) {
       <em>{label}</em>
       <strong>{value}</strong>
     </span>
+  );
+}
+
+function MinerHistoryPager({ uids, activeIndex, onSelect }: { uids: string[]; activeIndex: number; onSelect: (index: number) => void }) {
+  const previousDisabled = activeIndex <= 0;
+  const nextDisabled = activeIndex >= uids.length - 1;
+
+  return (
+    <nav className="miner-history-pager" aria-label="Miner history UID pages">
+      <button
+        type="button"
+        className="miner-history-page-arrow"
+        onClick={() => onSelect(Math.max(0, activeIndex - 1))}
+        disabled={previousDisabled}
+        aria-label="Previous miner history"
+        title="Previous miner"
+      >
+        <ChevronLeft size={15} />
+      </button>
+      <div className="miner-history-page-list">
+        {uids.map((uid, index) => (
+          <button
+            type="button"
+            className={index === activeIndex ? "miner-history-page-button miner-history-page-active" : "miner-history-page-button"}
+            key={`miner-history-page-${uid}-${index}`}
+            onClick={() => onSelect(index)}
+            aria-current={index === activeIndex ? "page" : undefined}
+            title={`Show history for UID ${uid}`}
+          >
+            {uid}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="miner-history-page-arrow"
+        onClick={() => onSelect(Math.min(uids.length - 1, activeIndex + 1))}
+        disabled={nextDisabled}
+        aria-label="Next miner history"
+        title="Next miner"
+      >
+        <ChevronRight size={15} />
+      </button>
+    </nav>
   );
 }
 
@@ -211,9 +270,8 @@ function MinerHistoryTable({ model, loading }: { model: MinerHistoryModel; loadi
         <tbody>
           {model.rows.map((row) => (
             <tr key={`miner-history-${row.timestamp}`}>
-              <td className="score-history-round-cell miner-history-time-cell" title={new Date(row.timestamp * 1000).toLocaleString()}>
-                <strong>{formatHistoryDate(row.timestamp)}</strong>
-                <span>{formatHistoryClock(row.timestamp)}</span>
+              <td className="score-history-round-cell miner-history-time-cell" title={formatHistoryDate(row.timestamp)}>
+                <span>{formatHistoryDate(row.timestamp)}</span>
               </td>
               {VALIDATOR_COLUMNS.map((index) => {
                 const validator = row.validators.find((point) => point.slot === index + 1);
@@ -235,10 +293,10 @@ function MinerHistoryTable({ model, loading }: { model: MinerHistoryModel; loadi
 function HistoryValidatorPointCell({ validator }: { validator: MinerHistoryValidatorPoint | undefined }) {
   return (
     <span className="validator-mini-card score-history-mini-card miner-history-mini-card">
-      <strong className="validator-mini-rank-metric"><span>R</span>{formatHistoryRank(validator)}</strong>
-      <strong className="validator-mini-loss-metric"><span>L</span>{formatHistoryMetric(validator?.loss, 4)}</strong>
-      <small className="validator-mini-weight-metric"><span>S</span>{formatHistoryMetric(validator?.scoreLatest, 3)}</small>
-      <small className="validator-mini-eval-metric"><span>A</span>{formatHistoryMetric(validator?.scoreAverage, 3)}</small>
+      <strong className="validator-mini-rank-metric" title="Rank"><span>R</span>{formatHistoryRank(validator)}</strong>
+      <strong className="validator-mini-loss-metric" title="Loss"><span>L</span>{formatHistoryMetric(validator?.loss, 4)}</strong>
+      <small className="validator-mini-weight-metric" title="Latest score"><span>S</span>{formatHistoryMetric(validator?.scoreLatest, 3)}</small>
+      <small className="validator-mini-eval-metric" title="Average score"><span>A</span>{formatHistoryMetric(validator?.scoreAverage, 3)}</small>
     </span>
   );
 }
@@ -249,6 +307,8 @@ function buildMinerHistoryModel(response: MinerHistoryApiResponse | null, fallba
   const range = isRecord(data.range) ? data.range : {};
   const meta = isRecord(payload.meta) ? payload.meta : {};
   const minerUid = asText(data.miner_uid) ?? fallbackMinerUid;
+  const startUnix = asNumber(range.start_unix);
+  const endUnix = asNumber(range.end_unix);
 
   return {
     minerUid,
@@ -257,12 +317,12 @@ function buildMinerHistoryModel(response: MinerHistoryApiResponse | null, fallba
     startIso: asText(range.start_iso),
     endIso: asText(range.end_iso),
     stepSeconds: asNumber(range.step_seconds),
-    rows: buildHistoryRows(isRecord(data.series) ? data.series : {}),
+    rows: buildHistoryRows(isRecord(data.series) ? data.series : {}, startUnix, endUnix),
     servedFrom: asText(meta.served_from)
   };
 }
 
-function buildHistoryRows(series: Record<string, unknown>): MinerHistoryRow[] {
+function buildHistoryRows(series: Record<string, unknown>, startUnix: number | null, endUnix: number | null): MinerHistoryRow[] {
   const timestamps = new Set<number>();
   const slots = new Set<number>();
 
@@ -277,7 +337,10 @@ function buildHistoryRows(series: Record<string, unknown>): MinerHistoryRow[] {
 
       slots.add(slot);
       for (const point of getSeriesPoints(rawPoints)) {
-        timestamps.add(point[0]);
+        const timestamp = point[0];
+        if ((startUnix === null || timestamp >= startUnix) && (endUnix === null || timestamp <= endUnix)) {
+          timestamps.add(timestamp);
+        }
       }
     }
   }
@@ -290,18 +353,22 @@ function buildHistoryRows(series: Record<string, unknown>): MinerHistoryRow[] {
         .sort((a, b) => a - b)
         .map((slot) => ({
           slot,
-          rank: getSeriesValue(series, "rank", slot, timestamp),
-          rankTotal: getSeriesValue(series, "rank_total", slot, timestamp),
-          loss: getSeriesValue(series, "val_loss", slot, timestamp),
-          scoreLatest: getSeriesValue(series, "score_latest", slot, timestamp),
-          scoreAverage: getSeriesValue(series, "score_avg", slot, timestamp)
+          rank: getSeriesValue(series, "rank", slot, timestamp, startUnix, endUnix),
+          rankTotal: getSeriesValue(series, "rank_total", slot, timestamp, startUnix, endUnix),
+          loss: getSeriesValue(series, "val_loss", slot, timestamp, startUnix, endUnix),
+          scoreLatest: getSeriesValue(series, "score_latest", slot, timestamp, startUnix, endUnix),
+          scoreAverage: getSeriesValue(series, "score_avg", slot, timestamp, startUnix, endUnix)
         }))
     }));
 }
 
-function getSeriesValue(series: Record<string, unknown>, seriesName: string, slot: number, timestamp: number) {
+function getSeriesValue(series: Record<string, unknown>, seriesName: string, slot: number, timestamp: number, startUnix: number | null, endUnix: number | null) {
   const metricSeries = isRecord(series[seriesName]) ? series[seriesName] : {};
-  const points = getSeriesPoints(metricSeries[String(slot)]);
+  const points = getSeriesPoints(metricSeries[String(slot)])
+    .filter(([pointTimestamp]) => (
+      (startUnix === null || pointTimestamp >= startUnix) &&
+      (endUnix === null || pointTimestamp <= endUnix)
+    ));
   const point = points.find(([pointTimestamp]) => pointTimestamp === timestamp);
   return point ? point[1] : null;
 }
@@ -350,14 +417,9 @@ function formatHistoryMetric(value: number | null | undefined, digits: number) {
 }
 
 function formatHistoryDate(timestamp: number) {
-  return new Date(timestamp * 1000).toLocaleDateString([], {
+  return new Date(timestamp * 1000).toLocaleString([], {
     month: "short",
-    day: "2-digit"
-  });
-}
-
-function formatHistoryClock(timestamp: number) {
-  return new Date(timestamp * 1000).toLocaleTimeString([], {
+    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit"
   });

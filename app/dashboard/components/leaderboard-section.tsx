@@ -1,9 +1,9 @@
 import { AlertTriangle, ChevronLeft, ChevronRight, Eye, EyeOff, History, Maximize2, Minimize2, Moon, Search, ShieldCheck, Sun, X } from "lucide-react";
-import { Fragment, useEffect, useMemo, useState } from "react";
-import type { KeyboardEvent, ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 
 import { LEADERBOARD_COLUMN_COUNT, LEADERBOARD_VIEW_UIDS_STORAGE_KEY, VALIDATOR_COLUMNS } from "../constants";
-import { formatBlock, formatBlockDuration, formatInteger, formatMetricNumber, formatNumber, formatPercent, formatRepoRevision, getHotkeyUrl, getHuggingFaceRepoUrl, getHuggingFaceRevisionUrl, shortText } from "../format";
+import { formatBlockDuration, formatInteger, formatMetricNumber, formatNumber, formatPercent, formatRepoRevision, getHotkeyUrl, getHuggingFaceRevisionUrl, shortText } from "../format";
 import { getMinerKey } from "../model";
 import type { DashboardModel, MinerRow, Theme, ValidatorHealth, ValidatorMetric } from "../types";
 import { SectionTitle } from "./section-title";
@@ -32,7 +32,6 @@ type LeaderboardSectionProps = {
   allRows: MinerRow[];
   filteredRows: MinerRow[];
   query: string;
-  selectedMinerKey: string | null;
   burnPercent: number | null;
   phase: DashboardModel["phase"];
   theme: Theme;
@@ -40,7 +39,6 @@ type LeaderboardSectionProps = {
   onQueryChange: (value: string) => void;
   onThemeToggle: () => void;
   onOpenHistory: (uids: string[]) => void;
-  onToggleMinerDetails: (row: MinerRow) => void;
 };
 
 function getDefaultSortDirection(key: LeaderboardSortKey): LeaderboardSortDirection {
@@ -173,15 +171,13 @@ export function LeaderboardSection({
   allRows,
   filteredRows,
   query,
-  selectedMinerKey,
   burnPercent,
   phase,
   theme,
   meta,
   onQueryChange,
   onThemeToggle,
-  onOpenHistory,
-  onToggleMinerDetails
+  onOpenHistory
 }: LeaderboardSectionProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(25);
@@ -379,10 +375,8 @@ export function LeaderboardSection({
                 key={getMinerKey(row)}
                 row={row}
                 validatorHealth={meta.validatorHealth}
-                selected={selectedMinerKey === getMinerKey(row)}
                 monitored={viewListUidSet.has(row.uid)}
                 onToggleViewList={toggleViewListMiner}
-                onToggleMinerDetails={onToggleMinerDetails}
               />
             ))}
             {!totalRows ? (
@@ -550,149 +544,104 @@ function LeaderboardSummaryStrip({ rows, burnPercent, meta }: LeaderboardSummary
 type LeaderboardRowProps = {
   row: MinerRow;
   validatorHealth: ValidatorHealth[];
-  selected: boolean;
   monitored: boolean;
   onToggleViewList: (row: MinerRow) => void;
-  onToggleMinerDetails: (row: MinerRow) => void;
 };
 
-function LeaderboardRow({ row, validatorHealth, selected, monitored, onToggleViewList, onToggleMinerDetails }: LeaderboardRowProps) {
+function LeaderboardRow({ row, validatorHealth, monitored, onToggleViewList }: LeaderboardRowProps) {
   const hotkeyUrl = getHotkeyUrl(row.hotkey);
   const repoRevisionUrl = getHuggingFaceRevisionUrl(row.repo, row.revision);
   const repoRevisionLabel = formatRepoRevision(row.repo, row.revision);
   const rowKey = getMinerKey(row);
-  const detailsId = `miner-details-${row.rank}-${row.uid}`;
   const rowScore = renderAggregateScoreMetric(row, 4);
   const rowWeight = formatLeaderboardMetricNumber(row.weight, 4);
   const rowLoss = formatLeaderboardMetricNumber(row.loss, 4);
   const rowDeltaLoss = formatLeaderboardMetricNumber(row.deltaLoss, 4);
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
-    if (event.target instanceof HTMLElement && event.target.closest("a, button, input")) {
-      return;
-    }
-
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      onToggleMinerDetails(row);
-    }
-  };
-
   return (
-    <Fragment>
-      <tr
-        className={`leaderboard-row${selected ? " leaderboard-row-selected" : ""}${monitored ? " leaderboard-row-monitored" : ""}`}
-        tabIndex={0}
-        aria-expanded={selected}
-        aria-controls={detailsId}
-        title={selected ? "Collapse validator details" : "Open validator details"}
-        onClick={() => onToggleMinerDetails(row)}
-        onKeyDown={handleKeyDown}
-      >
-        <td className="rank-column" data-label="Rank">
-          <div className="rank-cell">
-            <button
-              type="button"
-              className={`monitor-row-button${monitored ? " monitor-row-button-active" : ""}`}
-              aria-label={`${monitored ? "Remove" : "Add"} UID ${row.uid} ${monitored ? "from" : "to"} view list`}
-              aria-pressed={monitored}
-              title={`${monitored ? "Remove from" : "Add to"} view list`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onToggleViewList(row);
-              }}
-            >
-              {monitored ? <EyeOff size={13} /> : <Eye size={13} />}
-            </button>
-            <button
-              type="button"
-              className="row-toggle-button"
-              aria-label={`${selected ? "Collapse" : "Open"} validator details for UID ${row.uid}`}
-              aria-expanded={selected}
-              aria-controls={detailsId}
-              title={selected ? "Collapse details" : "Open details"}
-              onClick={(event) => {
-                event.stopPropagation();
-                onToggleMinerDetails(row);
-              }}
-            >
-              <ChevronRight size={14} />
-            </button>
-            <span>{row.rank}</span>
-          </div>
-        </td>
-        <td className="uid-column" data-label="UID">{row.uid}</td>
-        <td className="cohort-column" data-label="Group">
-          <CohortGroupBadge row={row} />
-        </td>
-        <td className="miner-column" data-label="Miner" title={`${row.hotkey} ${repoRevisionLabel}`}>
-          <div className="miner-cell">
-            <strong>
-              {hotkeyUrl ? (
-                <a className="table-link" href={hotkeyUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-                  {shortText(row.hotkey, 8, 6)}
-                </a>
-              ) : shortText(row.hotkey, 8, 6)}
-            </strong>
-            <span>
-              {repoRevisionUrl ? (
-                <a className="table-link" href={repoRevisionUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-                  {shortText(repoRevisionLabel, 20, 0)}
-                </a>
-              ) : shortText(repoRevisionLabel, 20, 0)}
-            </span>
-          </div>
-        </td>
-        <td className="loss-column" data-label="Loss">
-          <span className="leaderboard-metric-pill leaderboard-loss-pill">{rowLoss}</span>
-        </td>
-        <td className="delta-loss-column" data-label="Delta">{rowDeltaLoss}</td>
-        <td className="score-column" data-label="Score">{rowScore}</td>
-        <td className="weight-column" data-label="Weight">
-          <span className="leaderboard-metric-pill leaderboard-weight-pill">{rowWeight}</span>
-        </td>
-        <td className="assigned-column" data-label="Accepted">
-          <span className={`assignment-pill assignment-${row.assigned === null ? "unknown" : row.assigned ? "yes" : "no"}`}>
-            {row.assigned === null ? "-" : row.assigned ? "Yes" : "No"}
+    <tr className={`leaderboard-row${monitored ? " leaderboard-row-monitored" : ""}`}>
+      <td className="rank-column" data-label="Rank">
+        <div className="rank-cell">
+          <button
+            type="button"
+            className={`monitor-row-button${monitored ? " monitor-row-button-active" : ""}`}
+            aria-label={`${monitored ? "Remove" : "Add"} UID ${row.uid} ${monitored ? "from" : "to"} view list`}
+            aria-pressed={monitored}
+            title={`${monitored ? "Remove from" : "Add to"} view list`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleViewList(row);
+            }}
+          >
+            {monitored ? <EyeOff size={13} /> : <Eye size={13} />}
+          </button>
+          <span>{row.rank}</span>
+        </div>
+      </td>
+      <td className="uid-column" data-label="UID">{row.uid}</td>
+      <td className="cohort-column" data-label="Group">
+        <CohortGroupBadge row={row} />
+      </td>
+      <td className="miner-column" data-label="Miner" title={`${row.hotkey} ${repoRevisionLabel}`}>
+        <div className="miner-cell">
+          <strong>
+            {hotkeyUrl ? (
+              <a className="table-link" href={hotkeyUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
+                {shortText(row.hotkey, 8, 6)}
+              </a>
+            ) : shortText(row.hotkey, 8, 6)}
+          </strong>
+          <span>
+            {repoRevisionUrl ? (
+              <a className="table-link" href={repoRevisionUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
+                {shortText(repoRevisionLabel, 20, 0)}
+              </a>
+            ) : shortText(repoRevisionLabel, 20, 0)}
           </span>
-        </td>
-        <td className="validator-grid-column" data-label="Validators">
-          <div className="validator-mini-grid" aria-label={`Validator metrics for UID ${row.uid}`}>
-            {VALIDATOR_COLUMNS.map((index) => {
-              const metric = getValidatorMetricForColumn(row, index);
-              const health = getValidatorHealthForSlot(validatorHealth, index);
-              const tone = getValidatorTone(health, metric);
-              const rank = metric ? formatValidatorMiniRank(metric) : EMPTY_METRIC_VALUE;
-              const valLoss = formatLeaderboardMetricNumber(metric?.valLoss, 4);
-              const weight = formatLeaderboardMetricNumber(metric?.weightSubmitted, 4);
-              const evalStatus = formatShortEvalStatus(metric?.evalStatusLabel);
+        </div>
+      </td>
+      <td className="loss-column" data-label="Loss">
+        <span className="leaderboard-metric-pill leaderboard-loss-pill">{rowLoss}</span>
+      </td>
+      <td className="delta-loss-column" data-label="Delta">{rowDeltaLoss}</td>
+      <td className="score-column" data-label="Score">{rowScore}</td>
+      <td className="weight-column" data-label="Weight">
+        <span className="leaderboard-metric-pill leaderboard-weight-pill">{rowWeight}</span>
+      </td>
+      <td className="assigned-column" data-label="Accepted">
+        <span className={`assignment-pill assignment-${row.assigned === null ? "unknown" : row.assigned ? "yes" : "no"}`}>
+          {row.assigned === null ? "-" : row.assigned ? "Yes" : "No"}
+        </span>
+      </td>
+      <td className="validator-grid-column" data-label="Validators">
+        <div className="validator-mini-grid" aria-label={`Validator metrics for UID ${row.uid}`}>
+          {VALIDATOR_COLUMNS.map((index) => {
+            const metric = getValidatorMetricForColumn(row, index);
+            const health = getValidatorHealthForSlot(validatorHealth, index);
+            const tone = getValidatorTone(health, metric);
+            const rank = metric ? formatValidatorMiniRank(metric) : EMPTY_METRIC_VALUE;
+            const valLoss = formatLeaderboardMetricNumber(metric?.valLoss, 4);
+            const weight = formatLeaderboardMetricNumber(metric?.weightSubmitted, 4);
+            const evalStatus = formatShortEvalStatus(metric?.evalStatusLabel);
 
-              return (
-                <span
-                  className={`validator-mini-card validator-mini-${tone}`}
-                  key={`${rowKey}-validator-${index}`}
-                  title={metric
-                    ? `${metric.label}: ${formatAssignmentRole(metric.assignmentRole)}, rank ${formatValidatorRank(metric)}, loss ${valLoss}, weight ${weight}, eval ${formatEvalStatus(metric.evalStatusLabel)}`
-                    : `Validator ${index + 1}: ${formatValidatorStatus(health?.status)}`}
-                >
-                  <strong className="validator-mini-rank-metric"><span>R</span>{rank}</strong>
-                  <strong className="validator-mini-loss-metric"><span>L</span>{valLoss}</strong>
-                  <small className="validator-mini-weight-metric"><span>W</span>{weight}</small>
-                  <small className="validator-mini-eval-metric"><span>E</span>{evalStatus}</small>
-                </span>
-              );
-            })}
-          </div>
-        </td>
-      </tr>
-      {selected ? (
-        <tr className="leaderboard-details-row" id={detailsId}>
-          <td className="leaderboard-details-cell" colSpan={LEADERBOARD_COLUMN_COUNT}>
-            <MinerValidatorDetails row={row} />
-          </td>
-        </tr>
-      ) : null}
-    </Fragment>
+            return (
+              <span
+                className={`validator-mini-card validator-mini-${tone}`}
+                key={`${rowKey}-validator-${index}`}
+                title={metric
+                  ? `${metric.label}: ${formatAssignmentRole(metric.assignmentRole)}, rank ${formatValidatorRank(metric)}, loss ${valLoss}, weight ${weight}, eval ${formatEvalStatus(metric.evalStatusLabel)}`
+                  : `Validator ${index + 1}: ${formatValidatorStatus(health?.status)}`}
+              >
+                <strong className="validator-mini-rank-metric"><span>R</span>{rank}</strong>
+                <strong className="validator-mini-loss-metric"><span>L</span>{valLoss}</strong>
+                <small className="validator-mini-weight-metric"><span>W</span>{weight}</small>
+                <small className="validator-mini-eval-metric"><span>E</span>{evalStatus}</small>
+              </span>
+            );
+          })}
+        </div>
+      </td>
+    </tr>
   );
 }
 
@@ -780,18 +729,6 @@ function isOkStatus(status: string | null | undefined) {
   return status?.trim().toLowerCase() === OK_STATUS;
 }
 
-function getMetricClassName(status: string | null | undefined) {
-  if (isOkStatus(status)) {
-    return "ok-eval-metric";
-  }
-
-  if (shouldDisplayEvalStatusAsMetric(status)) {
-    return "no-chain-commit-metric";
-  }
-
-  return undefined;
-}
-
 function formatShortEvalStatus(status: string | null | undefined) {
   const normalized = status?.trim().toLowerCase();
 
@@ -816,32 +753,6 @@ function hasMetricValue(value: number | null | undefined) {
 
 function formatLeaderboardMetricNumber(value: number | null | undefined, digits: number) {
   return hasMetricValue(value) ? formatMetricNumber(value, digits) : EMPTY_METRIC_VALUE;
-}
-
-function formatMissingMetricStatus(status: string | null | undefined) {
-  const label = formatShortEvalStatus(status);
-  return label === "-" ? "missing" : `missing (${label})`;
-}
-
-function formatMetricByEvalStatus(value: number | null | undefined, status: string | null | undefined, digits: number) {
-  if (shouldDisplayEvalStatusAsMetric(status)) {
-    return formatShortEvalStatus(status);
-  }
-
-  return hasMetricValue(value) ? formatLeaderboardMetricNumber(value, digits) : formatMissingMetricStatus(status);
-}
-
-function formatValidatorBlock(metric: ValidatorMetric) {
-  return formatBlock(metric.extractedAtBlock);
-}
-
-function formatValidatorBlockTitle(metric: ValidatorMetric) {
-  const block = formatValidatorBlock(metric);
-  return block === "-" ? "No validator block reported" : `Validator data extracted at block ${block}`;
-}
-
-function renderMetricByEvalStatus(value: number | null | undefined, status: string | null | undefined, digits: number): ReactNode {
-  return shouldDisplayEvalStatusAsMetric(status) || !hasMetricValue(value) ? <MetricStatusMarker status={status} /> : formatLeaderboardMetricNumber(value, digits);
 }
 
 function renderAggregateScoreMetric(row: MinerRow, digits: number): ReactNode {
@@ -874,50 +785,8 @@ function MetricStatusMarker({ status }: { status: string | null | undefined }) {
   );
 }
 
-function getValidatorStatusClassName(status: string | null | undefined) {
-  const normalized = status?.trim().toLowerCase();
-
-  if (normalized === "live") {
-    return "detail-status-live";
-  }
-
-  if (normalized === "down") {
-    return "detail-status-down";
-  }
-
-  return normalized ? "detail-status-partial" : "detail-status-missing";
-}
-
-function getEvalBadgeClassName(status: string | null | undefined) {
-  const normalized = status?.trim().toLowerCase();
-
-  if (normalized === OK_STATUS) {
-    return "detail-eval-ok";
-  }
-
-  if (isNoChainCommitStatus(normalized)) {
-    return "detail-eval-warning";
-  }
-
-  return normalized ? "detail-eval-warning" : "detail-eval-missing";
-}
-
 function formatAssignmentRole(role: string | null | undefined) {
   return role ? role.replace(/_/g, " ") : "-";
-}
-
-function getRoleBadgeClassName(role: string | null | undefined) {
-  const normalized = role?.trim().toLowerCase();
-
-  if (normalized === "foreground") {
-    return "detail-role-foreground";
-  }
-
-  if (normalized === "background") {
-    return "detail-role-background";
-  }
-
-  return normalized ? "detail-role-other" : "detail-role-missing";
 }
 
 function formatValidatorRank(metric: ValidatorMetric) {
@@ -934,262 +803,4 @@ function formatValidatorMiniRank(metric: ValidatorMetric) {
   }
 
   return metric.rankTotal === null ? formatInteger(metric.rank) : `${formatInteger(metric.rank)} / ${formatInteger(metric.rankTotal)}`;
-}
-
-function getCommitTone(committedRecently: boolean | null | undefined) {
-  if (committedRecently === true) {
-    return "fresh";
-  }
-
-  if (committedRecently === false) {
-    return "stale";
-  }
-
-  return "unknown";
-}
-
-function formatCommitFreshness(committedRecently: boolean | null | undefined) {
-  if (committedRecently === true) {
-    return "Fresh";
-  }
-
-  if (committedRecently === false) {
-    return "Stale";
-  }
-
-  return "-";
-}
-
-function formatCommitLag(blocks: number | null | undefined) {
-  const formatted = formatInteger(blocks);
-  return formatted === "-" ? "-" : `${formatted} block${blocks === 1 ? "" : "s"}`;
-}
-
-function MinerValidatorDetails({ row }: { row: MinerRow }) {
-  const hotkeyUrl = getHotkeyUrl(row.hotkey);
-  const repoUrl = getHuggingFaceRepoUrl(row.repo);
-  const repoRevisionUrl = getHuggingFaceRevisionUrl(row.repo, row.revision);
-  const repoRevisionLabel = formatRepoRevision(row.repo, row.revision);
-  const assignmentTone = row.assigned === null ? "unknown" : row.assigned ? "yes" : "no";
-  const assignmentLabel = row.assigned === null ? "-" : row.assigned ? "Yes" : "No";
-
-  return (
-    <div className="miner-details">
-      <div className="miner-detail-header">
-        <div className="miner-detail-title">
-          <span>Miner UID {row.uid}</span>
-          <strong title={repoRevisionLabel}>
-            {repoRevisionUrl ? (
-              <a className="table-link" href={repoRevisionUrl} target="_blank" rel="noreferrer">
-                {shortText(repoRevisionLabel, 42, 0)}
-              </a>
-            ) : shortText(repoRevisionLabel, 42, 0)}
-          </strong>
-        </div>
-        <div className="miner-detail-actions">
-          <CohortGroupBadge row={row} prefix="Group " />
-          <span className={`commit-pill commit-${getCommitTone(row.committedRecently)}`}>
-            Commit {formatCommitFreshness(row.committedRecently)}
-          </span>
-          <span className={`assignment-pill assignment-${assignmentTone}`}>Accepted {assignmentLabel}</span>
-          {hotkeyUrl ? (
-            <a className="detail-link" href={hotkeyUrl} target="_blank" rel="noreferrer">
-              Hotkey
-            </a>
-          ) : null}
-          {repoUrl ? (
-            <a className="detail-link" href={repoUrl} target="_blank" rel="noreferrer">
-              Repository
-            </a>
-          ) : null}
-        </div>
-      </div>
-
-      <details className="miner-collapse miner-current-collapse">
-        <summary className="miner-collapse-summary">
-          <ChevronRight size={14} />
-          <span>Current scores</span>
-          <strong>Main scores</strong>
-        </summary>
-        <div className="miner-summary-grid">
-          <div className="miner-summary-item miner-summary-important miner-summary-priority">
-            <span>Loss</span>
-            <strong title={row.loss === null ? undefined : String(row.loss)}>
-              {formatLeaderboardMetricNumber(row.loss, 6)}
-            </strong>
-          </div>
-          <div className="miner-summary-item miner-summary-important miner-summary-priority">
-            <span>Delta</span>
-            <strong>{formatLeaderboardMetricNumber(row.deltaLoss, 6)}</strong>
-          </div>
-          <div className="miner-summary-item miner-summary-important miner-summary-priority">
-            <span>Score</span>
-            <strong>{renderAggregateScoreMetric(row, 6)}</strong>
-          </div>
-          <div className="miner-summary-item miner-summary-important miner-summary-priority">
-            <span>Weight</span>
-            <strong title={row.weight === null ? undefined : String(row.weight)}>
-              {formatLeaderboardMetricNumber(row.weight, 4)}
-            </strong>
-          </div>
-          <div className="miner-summary-item">
-            <span>Last commit</span>
-            <strong title={row.lastObservedCommitBlock === null ? undefined : String(row.lastObservedCommitBlock)}>
-              {formatBlock(row.lastObservedCommitBlock)}
-            </strong>
-          </div>
-          <div className="miner-summary-item">
-            <span>Commit lag</span>
-            <strong title={row.lastObservedCommitBlockLag === null ? undefined : String(row.lastObservedCommitBlockLag)}>
-              {formatCommitLag(row.lastObservedCommitBlockLag)}
-            </strong>
-          </div>
-          <div className="miner-summary-item">
-            <span>Commit status</span>
-            <strong>
-              <span className={`commit-pill commit-${getCommitTone(row.committedRecently)}`}>
-                {formatCommitFreshness(row.committedRecently)}
-              </span>
-            </strong>
-          </div>
-          <div className="miner-summary-item">
-            <span>Group</span>
-            <strong>
-              <CohortGroupBadge row={row} />
-            </strong>
-          </div>
-        </div>
-      </details>
-
-      <MinerScoreHistory row={row} />
-    </div>
-  );
-}
-
-type ScoreHistoryValidator = MinerRow["scoreHistory"][number]["validators"][number];
-type ScoreHistoryDisplayRound = Omit<MinerRow["scoreHistory"][number], "round"> & {
-  round: number | null;
-  current: boolean;
-};
-
-function getCurrentScoreHistoryRound(row: MinerRow): ScoreHistoryDisplayRound {
-  return {
-    round: null,
-    rank: row.rank,
-    phaseStartedAtBlock: null,
-    fetchedAt: "",
-    current: true,
-    validators: row.validatorMetrics.map((metric) => ({
-      validatorKey: `${metric.slot ?? ""}::${metric.uid ?? ""}::${metric.label}`,
-      label: metric.label,
-      slot: metric.slot,
-      uid: metric.uid,
-      rank: metric.rank,
-      rankTotal: metric.rankTotal,
-      valLoss: metric.valLoss,
-      score: metric.score,
-      weightSubmitted: metric.weightSubmitted,
-      evalStatusLabel: metric.evalStatusLabel,
-      extractedAtBlock: metric.extractedAtBlock
-    }))
-  };
-}
-
-function MinerScoreHistory({ row }: { row: MinerRow }) {
-  const savedHistory: ScoreHistoryDisplayRound[] = row.scoreHistory.slice(-8).map((historyRound) => ({
-    ...historyRound,
-    current: false
-  }));
-  const history = [...savedHistory, getCurrentScoreHistoryRound(row)];
-
-  return (
-    <details className="miner-collapse score-history-frame">
-      <summary className="miner-collapse-summary">
-        <ChevronRight size={14} />
-        <span>History</span>
-        <strong>{savedHistory.length ? `${savedHistory.length} saved + current` : "Current leaderboard"}</strong>
-      </summary>
-      <div className="score-history-scroll">
-        <table className="score-history-table" aria-label={`8-round validator score history and current leaderboard for UID ${row.uid}`}>
-          <thead>
-            <tr>
-              <th>Round</th>
-              <th>Rank</th>
-              {VALIDATOR_COLUMNS.map((index) => (
-                <th key={`score-history-validator-${row.uid}-${index}`}>V{index + 1}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {history.map((historyRound) => (
-              <tr className={historyRound.current ? "score-history-current-row" : undefined} key={`${row.uid}-history-round-${historyRound.current ? "current" : historyRound.round}-${historyRound.phaseStartedAtBlock ?? "phase"}`}>
-                <td className="score-history-round-cell" title={historyRound.fetchedAt ? `Fetched ${new Date(historyRound.fetchedAt).toLocaleString()}` : "Current leaderboard data"}>
-                  <strong>{historyRound.current ? "Current" : formatRawInteger(historyRound.round)}</strong>
-                  <span>{historyRound.current ? "leaderboard" : historyRound.phaseStartedAtBlock === null ? "start -" : `start ${formatBlock(historyRound.phaseStartedAtBlock)}`}</span>
-                </td>
-                <td className="score-history-rank-cell">{formatInteger(historyRound.rank)}</td>
-                {VALIDATOR_COLUMNS.map((index) => {
-                  const validator = getHistoryValidatorForColumn(historyRound, index);
-
-                  return (
-                    <td key={`${row.uid}-history-round-${historyRound.current ? "current" : historyRound.round}-validator-${index}`} title={formatScoreHistoryCellTitle(historyRound, validator)}>
-                      <HistoryValidatorCell validator={validator} />
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </details>
-  );
-}
-
-function getHistoryValidatorForColumn(historyRound: ScoreHistoryDisplayRound, index: number) {
-  const hasSlots = historyRound.validators.some((validator) => validator.slot !== null);
-  return hasSlots ? historyRound.validators.find((validator) => validator.slot === index + 1) : historyRound.validators[index];
-}
-
-function formatHistoryValidatorRank(validator: ScoreHistoryValidator | undefined) {
-  if (!validator || validator.rank === null) {
-    return EMPTY_METRIC_VALUE;
-  }
-
-  return validator.rankTotal === null ? formatInteger(validator.rank) : `${formatInteger(validator.rank)} / ${formatInteger(validator.rankTotal)}`;
-}
-
-function formatScoreHistoryCellTitle(historyRound: ScoreHistoryDisplayRound, validator: ScoreHistoryValidator | undefined) {
-  if (!validator) {
-    return `${historyRound.current ? "Current leaderboard" : `Round ${formatRawInteger(historyRound.round)}`}: no validator score recorded.`;
-  }
-
-  return [
-    historyRound.current ? "Current leaderboard" : `Round ${formatRawInteger(historyRound.round)}`,
-    historyRound.phaseStartedAtBlock === null ? null : `Distribute start ${formatBlock(historyRound.phaseStartedAtBlock)}`,
-    validator.label,
-    `rank ${formatHistoryValidatorRank(validator)}`,
-    `loss ${formatLeaderboardMetricNumber(validator.valLoss, 6)}`,
-    `weight ${formatLeaderboardMetricNumber(validator.weightSubmitted, 4)}`,
-    `eval ${formatEvalStatus(validator.evalStatusLabel)}`,
-    validator.extractedAtBlock === null ? null : `block ${formatBlock(validator.extractedAtBlock)}`,
-    historyRound.fetchedAt ? `fetched ${new Date(historyRound.fetchedAt).toLocaleString()}` : null
-  ].filter(Boolean).join(" | ");
-}
-
-function formatRawInteger(value: number | null | undefined) {
-  return value === null || value === undefined || !Number.isFinite(value)
-    ? EMPTY_METRIC_VALUE
-    : Intl.NumberFormat("en", { maximumFractionDigits: 0, useGrouping: false }).format(value);
-}
-
-function HistoryValidatorCell({ validator }: { validator: ScoreHistoryValidator | undefined }) {
-  return (
-    <span className="validator-mini-card score-history-mini-card">
-      <strong className="validator-mini-rank-metric"><span>R</span>{formatHistoryValidatorRank(validator)}</strong>
-      <strong className="validator-mini-loss-metric"><span>L</span>{validator ? formatLeaderboardMetricNumber(validator.valLoss, 4) : EMPTY_METRIC_VALUE}</strong>
-      <small className="validator-mini-weight-metric"><span>W</span>{validator ? formatLeaderboardMetricNumber(validator.weightSubmitted, 4) : EMPTY_METRIC_VALUE}</small>
-      <small className="validator-mini-eval-metric"><span>E</span>{validator ? formatShortEvalStatus(validator.evalStatusLabel) : EMPTY_METRIC_VALUE}</small>
-    </span>
-  );
 }

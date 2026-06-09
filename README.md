@@ -12,7 +12,6 @@ The app is built with Next.js and reads leaderboard data through a local API rou
 - Round loss chart and round health summary.
 - Weight and score bar charts.
 - Leaderboard table with v2 validator metrics grouped by validator.
-- Expandable miner rows for detailed validator status, eval, score, loss, submitted weight, and samples.
 - Dark/light theme toggle persisted in local storage.
 - Best-effort local cache fallback when the upstream API is slow or unavailable.
 

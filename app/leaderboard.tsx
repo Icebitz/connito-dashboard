@@ -11,8 +11,8 @@ import { PhasePanels, RoundHealthPanel } from "./dashboard/components/phase-pane
 import { RoundTrendSection } from "./dashboard/components/round-trend-section";
 import { REFRESH_MS, SYNC_COUNTER_MS, THEME_STORAGE_KEY } from "./dashboard/constants";
 import { formatDuration } from "./dashboard/format";
-import { buildDashboardModel, getMinerKey } from "./dashboard/model";
-import type { ApiResponse, DashboardStatus, MinerRow, Theme } from "./dashboard/types";
+import { buildDashboardModel } from "./dashboard/model";
+import type { ApiResponse, DashboardStatus, Theme } from "./dashboard/types";
 
 export default function Leaderboard() {
   const [leaderboard, setLeaderboard] = useState<ApiResponse | null>(null);
@@ -21,7 +21,6 @@ export default function Leaderboard() {
   const [historyMinerUids, setHistoryMinerUids] = useState<string[]>([]);
   const [theme, setTheme] = useState<Theme>("dark");
   const [themeReady, setThemeReady] = useState(false);
-  const [selectedMinerKey, setSelectedMinerKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -95,17 +94,6 @@ export default function Leaderboard() {
     ].filter((value) => value !== null && value !== undefined).join(" ").toLowerCase().includes(needle));
   }, [model.rows, query]);
 
-  useEffect(() => {
-    if (selectedMinerKey && !model.rows.some((row) => getMinerKey(row) === selectedMinerKey)) {
-      setSelectedMinerKey(null);
-    }
-  }, [model.rows, selectedMinerKey]);
-
-  const toggleMinerDetails = useCallback((row: MinerRow) => {
-    const rowKey = getMinerKey(row);
-    setSelectedMinerKey((current) => current === rowKey ? null : rowKey);
-  }, []);
-
   const openMinerHistory = useCallback((uids: string[]) => {
     setHistoryMinerUids(uids);
     setActiveTab("history");
@@ -170,7 +158,6 @@ export default function Leaderboard() {
             allRows={model.rows}
             filteredRows={filteredRows}
             query={query}
-            selectedMinerKey={selectedMinerKey}
             burnPercent={model.metrics.burnPercent}
             phase={model.phase}
             theme={theme}
@@ -178,7 +165,6 @@ export default function Leaderboard() {
             onQueryChange={setQuery}
             onThemeToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")}
             onOpenHistory={openMinerHistory}
-            onToggleMinerDetails={toggleMinerDetails}
           />
         </>
       ) : (

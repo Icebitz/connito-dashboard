@@ -3104,6 +3104,10 @@ tbody tr:hover {
   min-width: 0;
   flex: 1 1 auto;
   text-align: right;
+  font-size: var(--font-xs);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
 }
 
 .monitor-row-button {
@@ -3144,6 +3148,11 @@ tbody .loss-column,
 tbody .delta-loss-column,
 tbody .assigned-column {
   text-align: right;
+}
+
+tbody .uid-column {
+  font-size: var(--font-xs);
+  font-weight: 800;
 }
 
 .leaderboard-metric-pill {

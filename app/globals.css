@@ -2749,7 +2749,7 @@ thead th > small {
 }
 
 .rank-column {
-  min-width: 96px;
+  min-width: 72px;
 }
 
 .uid-column {
@@ -2972,6 +2972,10 @@ tbody td {
   background: transparent;
 }
 
+.validator-mini-card {
+  box-shadow: inset 1px 0 0 var(--table-row-border);
+}
+
 .validator-mini-card strong,
 .validator-mini-card small {
   min-width: 0;
@@ -3123,6 +3127,11 @@ tbody tr:hover {
   line-height: 1;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
+}
+
+.rank-prefix {
+  color: var(--muted);
+  opacity: 0.6;
 }
 
 .monitor-row-button {

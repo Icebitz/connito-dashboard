@@ -1,5 +1,5 @@
 import { AlertTriangle, ChevronLeft, ChevronRight, Eye, EyeOff, History, Maximize2, Minimize2, Moon, Search, ShieldCheck, Sun, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { LEADERBOARD_COLUMN_COUNT, LEADERBOARD_VIEW_UIDS_STORAGE_KEY, VALIDATOR_COLUMNS } from "../constants";
@@ -8,7 +8,7 @@ import { getMinerKey } from "../model";
 import type { DashboardModel, MinerRow, Theme, ValidatorHealth, ValidatorMetric } from "../types";
 import { SectionTitle } from "./section-title";
 
-const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+const PAGE_SIZE_OPTIONS = [25, 50, 100, "all"] as const;
 const NO_CHAIN_COMMIT_STATUS = "no_chain_commit";
 const OK_STATUS = "ok";
 const EMPTY_METRIC_VALUE = "-";
@@ -18,6 +18,13 @@ type LeaderboardSortDirection = "asc" | "desc";
 type LeaderboardSort = {
   key: LeaderboardSortKey;
   direction: LeaderboardSortDirection;
+};
+
+type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number];
+
+type RowPosition = {
+  left: number;
+  top: number;
 };
 
 function normalizeStoredUids(value: unknown) {
@@ -139,6 +146,140 @@ function sortLeaderboardRows(rows: MinerRow[], sort: LeaderboardSort) {
   });
 }
 
+function parsePageSizeOption(value: string): PageSizeOption {
+  if (value === "all") {
+    return "all";
+  }
+
+  const numericValue = Number(value);
+  return PAGE_SIZE_OPTIONS.includes(numericValue as PageSizeOption) ? numericValue as PageSizeOption : 25;
+}
+
+function useLeaderboardRowSwapAnimation(rows: MinerRow[]) {
+  const rowElementsRef = useRef(new Map<string, HTMLTableRowElement>());
+  const previousPositionsRef = useRef(new Map<string, RowPosition>());
+  const previousRanksRef = useRef(new Map<string, number>());
+  const animationTimeoutRef = useRef<number | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  const registerRowRef = useRef((key: string) => (node: HTMLTableRowElement | null) => {
+    if (node) {
+      rowElementsRef.current.set(key, node);
+    } else {
+      rowElementsRef.current.delete(key);
+    }
+  }).current;
+
+  useLayoutEffect(() => {
+    const previousFrame = animationFrameRef.current;
+    const previousTimeout = animationTimeoutRef.current;
+
+    if (previousFrame !== null) {
+      window.cancelAnimationFrame(previousFrame);
+      animationFrameRef.current = null;
+    }
+
+    if (previousTimeout !== null) {
+      window.clearTimeout(previousTimeout);
+      animationTimeoutRef.current = null;
+    }
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const currentRanks = new Map(rows.map((row) => [row.uid, row.rank]));
+    const nextPositions = new Map<string, RowPosition>();
+
+    for (const row of rows) {
+      const element = rowElementsRef.current.get(row.uid);
+
+      if (element) {
+        const rect = element.getBoundingClientRect();
+        nextPositions.set(row.uid, { left: rect.left, top: rect.top });
+      }
+    }
+
+    const previousPositions = previousPositionsRef.current;
+    const previousRanks = previousRanksRef.current;
+    const sameKeySet = rows.length === previousPositions.size && rows.every((row) => previousPositions.has(row.uid));
+
+    previousPositionsRef.current = nextPositions;
+    previousRanksRef.current = currentRanks;
+
+    if (reduceMotion || !sameKeySet || !previousPositions.size) {
+      return;
+    }
+
+    const movingRows: Array<{ dx: number; dy: number; element: HTMLTableRowElement }> = [];
+
+    for (const row of rows) {
+      const element = rowElementsRef.current.get(row.uid);
+      const previous = previousPositions.get(row.uid);
+      const next = nextPositions.get(row.uid);
+      const previousRank = previousRanks.get(row.uid);
+      const currentRank = currentRanks.get(row.uid);
+
+      if (!element || !previous || !next || previousRank === currentRank) {
+        continue;
+      }
+
+      const dx = previous.left - next.left;
+      const dy = previous.top - next.top;
+
+      if (dx || dy) {
+        movingRows.push({ dx, dy, element });
+      }
+    }
+
+    if (!movingRows.length) {
+      return;
+    }
+
+    for (const { dx, dy, element } of movingRows) {
+      element.style.transition = "transform 0ms";
+      element.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      element.style.willChange = "transform";
+      element.style.zIndex = "1";
+      element.dataset.rankSwap = "true";
+    }
+
+    // Force a reflow so the inverse transform is committed before animating back.
+    void document.body.offsetHeight;
+
+    animationFrameRef.current = window.requestAnimationFrame(() => {
+      for (const { element } of movingRows) {
+        element.style.transition = "transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1)";
+        element.style.transform = "";
+      }
+      animationFrameRef.current = null;
+    });
+
+    animationTimeoutRef.current = window.setTimeout(() => {
+      for (const { element } of movingRows) {
+        element.style.transition = "";
+        element.style.transform = "";
+        element.style.willChange = "";
+        element.style.zIndex = "";
+        delete element.dataset.rankSwap;
+      }
+      animationTimeoutRef.current = null;
+    }, 560);
+  }, [rows]);
+
+  useEffect(() => () => {
+    const frame = animationFrameRef.current;
+    const timeout = animationTimeoutRef.current;
+
+    if (frame !== null) {
+      window.cancelAnimationFrame(frame);
+    }
+
+    if (timeout !== null) {
+      window.clearTimeout(timeout);
+    }
+  }, []);
+
+  return registerRowRef;
+}
+
 type SortableLeaderboardHeaderProps = {
   className: string;
   label: string;
@@ -180,7 +321,7 @@ export function LeaderboardSection({
   onOpenHistory
 }: LeaderboardSectionProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(25);
+  const [pageSize, setPageSize] = useState<PageSizeOption>(25);
   const [fullscreen, setFullscreen] = useState(false);
   const [viewListUids, setViewListUids] = useState<string[]>([]);
   const [viewListHydrated, setViewListHydrated] = useState(false);
@@ -197,13 +338,18 @@ export function LeaderboardSection({
   );
   const sortedRows = useMemo(() => sortLeaderboardRows(displayedRows, sort), [displayedRows, sort]);
   const totalRows = sortedRows.length;
-  const pageCount = Math.max(1, Math.ceil(totalRows / pageSize));
+  const isAllRows = pageSize === "all";
+  const pageCount = isAllRows ? 1 : Math.max(1, Math.ceil(totalRows / pageSize));
   const safeCurrentPage = Math.min(currentPage, pageCount);
-  const pageStart = (safeCurrentPage - 1) * pageSize;
-  const pageRows = useMemo(() => sortedRows.slice(pageStart, pageStart + pageSize), [sortedRows, pageSize, pageStart]);
+  const pageStart = isAllRows ? 0 : (safeCurrentPage - 1) * pageSize;
+  const pageRows = useMemo(
+    () => isAllRows ? sortedRows : sortedRows.slice(pageStart, pageStart + pageSize),
+    [isAllRows, pageSize, pageStart, sortedRows]
+  );
   const visibleStart = totalRows ? pageStart + 1 : 0;
-  const visibleEnd = Math.min(pageStart + pageSize, totalRows);
+  const visibleEnd = isAllRows ? totalRows : Math.min(pageStart + pageSize, totalRows);
   const emptyLeaderboardMessage = showViewListOnly ? "No selected miners match the current search." : "No miners match the current search.";
+  const registerRowRef = useLeaderboardRowSwapAnimation(pageRows);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -282,7 +428,7 @@ export function LeaderboardSection({
   return (
     <section className={`leaderboard-section${fullscreen ? " leaderboard-section-fullscreen" : ""}`}>
       <div className="leaderboard-header">
-        <SectionTitle eyebrow="Leaderboard" title="Top Miners" />
+        <SectionTitle eyebrow="Leaderboard" />
         <FullscreenPhaseBar phase={phase} />
         <div className="leaderboard-actions">
           <div className="leaderboard-search-stack">
@@ -377,6 +523,7 @@ export function LeaderboardSection({
                 validatorHealth={meta.validatorHealth}
                 monitored={viewListUidSet.has(row.uid)}
                 onToggleViewList={toggleViewListMiner}
+                rowRef={registerRowRef(getMinerKey(row))}
               />
             ))}
             {!totalRows ? (
@@ -395,9 +542,15 @@ export function LeaderboardSection({
         <div className="pagination-controls">
           <label className="page-size-field">
             <span>Rows</span>
-            <select aria-label="Rows per page" value={pageSize} onChange={(event) => setPageSize(Number(event.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])}>
+            <select
+              aria-label="Rows per page"
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(parsePageSizeOption(event.target.value));
+              }}
+            >
               {PAGE_SIZE_OPTIONS.map((option) => (
-                <option key={option} value={option}>{option}</option>
+                <option key={option} value={option}>{option === "all" ? "All" : option}</option>
               ))}
             </select>
           </label>
@@ -546,9 +699,10 @@ type LeaderboardRowProps = {
   validatorHealth: ValidatorHealth[];
   monitored: boolean;
   onToggleViewList: (row: MinerRow) => void;
+  rowRef: (node: HTMLTableRowElement | null) => void;
 };
 
-function LeaderboardRow({ row, validatorHealth, monitored, onToggleViewList }: LeaderboardRowProps) {
+function LeaderboardRow({ row, validatorHealth, monitored, onToggleViewList, rowRef }: LeaderboardRowProps) {
   const hotkeyUrl = getHotkeyUrl(row.hotkey);
   const repoRevisionUrl = getHuggingFaceRevisionUrl(row.repo, row.revision);
   const repoRevisionLabel = formatRepoRevision(row.repo, row.revision);
@@ -559,7 +713,7 @@ function LeaderboardRow({ row, validatorHealth, monitored, onToggleViewList }: L
   const rowDeltaLoss = formatLeaderboardMetricNumber(row.deltaLoss, 4);
 
   return (
-    <tr className={`leaderboard-row${monitored ? " leaderboard-row-monitored" : ""}`}>
+    <tr ref={rowRef} className={`leaderboard-row${monitored ? " leaderboard-row-monitored" : ""}`}>
       <td className="rank-column" data-label="Rank">
         <div className="rank-cell">
           <button

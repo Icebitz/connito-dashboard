@@ -2749,7 +2749,7 @@ thead th > small {
 }
 
 .rank-column {
-  min-width: 96px;
+  min-width: 72px;
 }
 
 .uid-column {
@@ -2954,7 +2954,7 @@ tbody td {
 .validator-mini-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0;
+  gap: 0 4px;
   background: transparent;
 }
 
@@ -2965,11 +2965,15 @@ tbody td {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
   align-items: center;
-  gap: 1px 4px;
-  padding: 2px 4px;
+  gap: 2px 8px;
+  padding: 2px 8px;
   border: 0;
   border-radius: 0;
   background: transparent;
+}
+
+.validator-mini-card {
+  box-shadow: inset 1px 0 0 var(--table-row-border);
 }
 
 .validator-mini-card strong,
@@ -2978,7 +2982,7 @@ tbody td {
   display: inline-flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 3px;
+  gap: 5px;
   overflow: hidden;
   text-align: right;
   text-overflow: ellipsis;
@@ -3015,7 +3019,7 @@ tbody td {
 .validator-mini-card .validator-mini-weight-metric,
 .validator-mini-card .validator-mini-eval-metric {
   min-height: 14px;
-  padding: 0 3px;
+  padding: 0 5px;
   border: 0;
   border-radius: 4px;
   font-weight: 900;
@@ -3123,6 +3127,11 @@ tbody tr:hover {
   line-height: 1;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
+}
+
+.rank-prefix {
+  color: var(--muted);
+  opacity: 0.6;
 }
 
 .monitor-row-button {
@@ -3933,7 +3942,8 @@ tbody tr:last-child td {
   }
 
   .validator-mini-grid {
-    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+    gap: 3px 6px;
   }
 
   .score-history-table {

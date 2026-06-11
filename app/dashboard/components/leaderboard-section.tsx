@@ -729,7 +729,10 @@ function LeaderboardRow({ row, validatorHealth, monitored, onToggleViewList, row
           >
             {monitored ? <EyeOff size={13} /> : <Eye size={13} />}
           </button>
-          <span>{`# ${row.rank}`}</span>
+          <span>
+            <span className="rank-prefix">#</span>
+            {` ${row.rank}`}
+          </span>
         </div>
       </td>
       <td className="uid-column" data-label="UID">{row.uid}</td>

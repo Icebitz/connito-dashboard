@@ -1158,57 +1158,6 @@ h1 {
   animation: progress-sheen 1.8s ease-in-out infinite;
 }
 
-.progress-cursor {
-  position: absolute;
-  top: calc(100% + 6px);
-  display: grid;
-  gap: 2px;
-  justify-items: center;
-  transform: translateX(-50%);
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  white-space: nowrap;
-  transition: left 0.72s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.progress-cursor strong {
-  color: var(--heading);
-  font-size: var(--font-2xs);
-  font-weight: 900;
-  line-height: 1;
-}
-
-.progress-cursor small {
-  color: var(--muted);
-  font-size: var(--font-3xs);
-  font-weight: 900;
-  line-height: 1;
-}
-
-.progress-cursor::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 2px);
-  width: 1px;
-  height: 5px;
-  transform: translateX(-50%);
-  background: var(--cyan);
-}
-
-.progress-time-ratio {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 7px);
-  color: var(--muted);
-  font-size: var(--font-2xs);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  white-space: nowrap;
-}
-
 .phase-window {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1256,6 +1205,15 @@ h1 {
   white-space: nowrap;
 }
 
+.phase-window-progress {
+  position: relative;
+  margin-top: 4px;
+}
+
+.phase-window-progress .progress-track {
+  margin: 10px 0 14px;
+}
+
 .phase-window-card > strong {
   font-size: var(--font-md);
   line-height: 1.12;
@@ -1275,7 +1233,8 @@ h1 {
 
 .phase-window-current {
   --phase-card-scale: 1.08;
-  min-height: 126px;
+  min-height: 140px;
+  justify-content: flex-start;
   border-color: rgba(70, 215, 210, 0.34);
   background: linear-gradient(180deg, rgba(70, 215, 210, 0.08), rgba(90, 168, 255, 0.035)), var(--panel-soft);
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
@@ -1306,6 +1265,31 @@ h1 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px;
   min-width: 0;
+}
+
+.phase-window-blocks-inline {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 6px;
+  margin-top: 2px;
+  color: var(--heading);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.phase-window-blocks-inline .phase-window-block-value {
+  color: var(--heading);
+  font-size: var(--font-sm);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.phase-window-block-separator {
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 900;
+  line-height: 1;
 }
 
 .phase-window-block {
@@ -3580,10 +3564,6 @@ tbody tr:last-child td {
   .progress-track:not(.progress-track-skeleton) > i::after,
   .leaderboard-fullscreen-progress-track > i::after {
     animation: none;
-    transition: none;
-  }
-
-  .progress-cursor {
     transition: none;
   }
 

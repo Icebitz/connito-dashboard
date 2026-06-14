@@ -57,52 +57,57 @@ export function PhasePanels({ phase, loading, loadingUpcoming }: PhasePanelsProp
         <PhasePanelSkeleton />
       ) : (
         <article className="phase-panel">
-          <SectionTitle eyebrow="Phase Cycle" title={phase.name} />
-          <div className="progress-track" title={`${formatNumber(phase.progress, 1)}% complete, ${formatBlockDuration(phase.blocksRemaining)} remaining`}>
-            <span className="progress-time-ratio">
-              {formatBlockDuration(phase.blocksRemaining)} remaining
-            </span>
-            <i style={{ width: `${phase.progress}%` }} />
-            <span className="progress-cursor" style={{ left: `${phase.progress}%` }}>
-              <strong>{formatBlock(phase.headBlock)}</strong>
-              <small>{formatNumber(phase.progress, 1)}%</small>
-            </span>
-          </div>
+          <SectionTitle eyebrow="Phase Cycle" />
           <div className={`phase-window${moving || loadingUpcoming ? " phase-window-moving" : ""}`} aria-label="Phase cycle">
-            {phaseWindow.map((item) => (
-              <article
-                className={`phase-window-card phase-window-${getPhasePositionClass(item.position)}`}
-                key={item.key}
-                aria-current={item.position === 0 ? "step" : undefined}
-              >
-                <span>{item.label}</span>
-                <strong>{item.name}</strong>
-                <div className="phase-window-meta">
+            {phaseWindow.map((item) => {
+              const progress = item.progress ?? 0;
+
+              return (
+                <article
+                  className={`phase-window-card phase-window-${getPhasePositionClass(item.position)}`}
+                  key={item.key}
+                  aria-current={item.position === 0 ? "step" : undefined}
+                >
+                  <span>{item.label}</span>
+                  <strong>{item.name}</strong>
                   {item.position === 0 ? (
-                    <>
-                      <em>{formatNumber(item.progress, 1)}%</em>
-                      <small>{formatBlockDuration(item.blocksRemaining)} left</small>
-                    </>
-                  ) : item.position > 0 ? (
-                    <>
-                      <em>{formatBlockDuration(item.blocksUntilStart)}</em>
-                      <small>starts</small>
-                    </>
-                  ) : (
-                    <>
-                      <em>{item.duration === null ? "-" : formatBlockDuration(item.duration)}</em>
-                      <small>duration</small>
-                    </>
-                  )}
-                </div>
-                {item.position === 0 ? (
-                  <div className="phase-window-blocks" aria-label="Current phase blocks">
-                    <PhaseWindowBlock label="Start" blocks={item.startBlock} />
-                    <PhaseWindowBlock label="End" blocks={item.endBlock} />
+                    <div className="phase-window-progress">
+                      <div className="progress-track phase-window-progress-track" title={`${formatNumber(progress, 1)}% complete, ${formatBlockDuration(item.blocksRemaining)} remaining`}>
+                        <i style={{ width: `${progress}%` }} />
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="phase-window-meta">
+                    {item.position === 0 ? (
+                      <>
+                        <em>{formatNumber(progress, 1)}%</em>
+                        <small>{formatBlockDuration(item.blocksRemaining)} left</small>
+                      </>
+                    ) : item.position > 0 ? (
+                      <>
+                        <em>{formatBlockDuration(item.blocksUntilStart)}</em>
+                        <small>starts</small>
+                      </>
+                    ) : (
+                      <>
+                        <em>{item.duration === null ? "-" : formatBlockDuration(item.duration)}</em>
+                        <small>duration</small>
+                      </>
+                    )}
                   </div>
-                ) : null}
-              </article>
-            ))}
+                  {item.position === 0 ? (
+                    <div
+                      className="phase-window-blocks phase-window-blocks-inline"
+                      aria-label={`Current phase blocks ${formatBlock(item.startBlock)} - ${formatBlock(item.endBlock)}`}
+                    >
+                      <span className="phase-window-block-value">{formatBlock(item.startBlock)}</span>
+                      <span className="phase-window-block-separator">-</span>
+                      <span className="phase-window-block-value">{formatBlock(item.endBlock)}</span>
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
         </article>
       )}

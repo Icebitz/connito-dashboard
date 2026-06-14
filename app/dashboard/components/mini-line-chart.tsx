@@ -55,6 +55,7 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [chartSize, setChartSize] = useState({ width: 960, height: 190 });
+  const visiblePoints = points.slice(-10);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -87,9 +88,9 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
 
     observer.observe(svg);
     return () => observer.disconnect();
-  }, [points.length]);
+  }, [visiblePoints.length]);
 
-  if (points.length < 2) {
+  if (visiblePoints.length < 2) {
     return <div className="empty-state">Waiting for round history</div>;
   }
 
@@ -98,23 +99,25 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
   const padRight = 28;
   const padTop = 18;
   const padBottom = 28;
-  const values = points.map((point) => point.value);
+  const values = visiblePoints.map((point) => point.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const rawRange = max - min;
   const range = rawRange || 1;
   const graphWidth = width - padLeft - padRight;
   const graphHeight = height - padTop - padBottom;
-  const xFor = (index: number) => padLeft + graphWidth * (index / Math.max(1, points.length - 1));
+  const xFor = (index: number) => padLeft + graphWidth * (index / Math.max(1, visiblePoints.length - 1));
   const yFor = (value: number) => padTop + ((max - value) / range) * graphHeight;
-  const chartPoints = points.map((point, index) => ({ x: xFor(index), y: yFor(point.value) }));
+  const chartPoints = visiblePoints.map((point, index) => ({ x: xFor(index), y: yFor(point.value) }));
   const line = buildSmoothPath(chartPoints);
-  const area = `${line} L ${xFor(points.length - 1).toFixed(2)} ${height - padBottom} L ${xFor(0).toFixed(2)} ${height - padBottom} Z`;
-  const valueTicks = rawRange === 0 ? [max] : [max, min + rawRange / 2, min];
-  const ticks = [0, Math.floor((points.length - 1) / 2), points.length - 1].filter((value, index, array) => array.indexOf(value) === index);
-  const latest = points[points.length - 1];
-  const hovered = hoverIndex === null ? latest : points[hoverIndex];
-  const hoveredX = xFor(hoverIndex ?? points.length - 1);
+  const area = `${line} L ${xFor(visiblePoints.length - 1).toFixed(2)} ${height - padBottom} L ${xFor(0).toFixed(2)} ${height - padBottom} Z`;
+  const valueTicks = rawRange === 0
+    ? [max]
+    : Array.from({ length: 5 }, (_, index) => max - (rawRange * index) / 4);
+  const latest = visiblePoints[visiblePoints.length - 1];
+  const boundedHoverIndex = hoverIndex === null ? null : Math.min(hoverIndex, visiblePoints.length - 1);
+  const hovered = boundedHoverIndex === null ? latest : visiblePoints[boundedHoverIndex];
+  const hoveredX = xFor(boundedHoverIndex ?? visiblePoints.length - 1);
   const hoveredY = yFor(hovered.value);
   const tooltipX = hoveredX > width - 220 ? hoveredX - 172 : hoveredX + 14;
   const tooltipY = Math.max(10, Math.min(height - 62, hoveredY - 42));
@@ -122,8 +125,8 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
   const updateHover = (event: MouseEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const relativeX = ((event.clientX - rect.left) / rect.width) * width;
-    const index = Math.round(((relativeX - padLeft) / graphWidth) * (points.length - 1));
-    setHoverIndex(Math.max(0, Math.min(points.length - 1, index)));
+    const index = Math.round(((relativeX - padLeft) / graphWidth) * (visiblePoints.length - 1));
+    setHoverIndex(Math.max(0, Math.min(visiblePoints.length - 1, index)));
   };
 
   return (
@@ -162,7 +165,7 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
             className="chart-dot"
             cx={point.x}
             cy={point.y}
-            key={`${points[index].round}-${index}`}
+            key={`${visiblePoints[index].round}-${index}`}
             r="3.25"
           />
         ))}
@@ -177,11 +180,11 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
             </g>
           </>
         ) : null}
-        {ticks.map((index) => (
-          <g key={points[index].round}>
+        {visiblePoints.map((point, index) => (
+          <g key={point.round}>
             <line className="chart-tick" x1={xFor(index)} x2={xFor(index)} y1={height - padBottom} y2={height - padBottom + 5} />
             <text x={xFor(index)} y={height - 10} textAnchor="middle">
-              {formatInteger(points[index].round)}
+              {formatInteger(point.round)}
             </text>
           </g>
         ))}

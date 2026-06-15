@@ -15,7 +15,7 @@ type ChartPoint = {
   y: number;
 };
 
-function buildSmoothPath(chartPoints: ChartPoint[]) {
+function buildLinearPath(chartPoints: ChartPoint[]) {
   if (chartPoints.length === 0) {
     return "";
   }
@@ -25,29 +25,12 @@ function buildSmoothPath(chartPoints: ChartPoint[]) {
     return `M ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
   }
 
-  const controlPoint = (current: ChartPoint, previous: ChartPoint, next: ChartPoint, reverse = false) => {
-    const smoothing = 0.18;
-    const length = Math.hypot(next.x - previous.x, next.y - previous.y) * smoothing;
-    const angle = Math.atan2(next.y - previous.y, next.x - previous.x) + (reverse ? Math.PI : 0);
-
-    return {
-      x: current.x + Math.cos(angle) * length,
-      y: current.y + Math.sin(angle) * length
-    };
-  };
-
-  return chartPoints.reduce((path, point, index, array) => {
+  return chartPoints.reduce((path, point, index) => {
     if (index === 0) {
       return `M ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
     }
 
-    const previous = array[index - 1];
-    const previousPrevious = array[index - 2] ?? previous;
-    const next = array[index + 1] ?? point;
-    const startControl = controlPoint(previous, previousPrevious, point);
-    const endControl = controlPoint(point, previous, next, true);
-
-    return `${path} C ${startControl.x.toFixed(2)} ${startControl.y.toFixed(2)}, ${endControl.x.toFixed(2)} ${endControl.y.toFixed(2)}, ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+    return `${path} L ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
   }, "");
 }
 
@@ -109,7 +92,7 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
   const xFor = (index: number) => padLeft + graphWidth * (index / Math.max(1, visiblePoints.length - 1));
   const yFor = (value: number) => padTop + ((max - value) / range) * graphHeight;
   const chartPoints = visiblePoints.map((point, index) => ({ x: xFor(index), y: yFor(point.value) }));
-  const line = buildSmoothPath(chartPoints);
+  const line = buildLinearPath(chartPoints);
   const area = `${line} L ${xFor(visiblePoints.length - 1).toFixed(2)} ${height - padBottom} L ${xFor(0).toFixed(2)} ${height - padBottom} Z`;
   const valueTicks = rawRange === 0
     ? [max]

@@ -37,7 +37,7 @@ function buildLinearPath(chartPoints: ChartPoint[]) {
 export function MiniLineChart({ points }: MiniLineChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const [chartSize, setChartSize] = useState({ width: 960, height: 190 });
+  const [chartSize, setChartSize] = useState({ width: 960, height: 210 });
   const visiblePoints = points.slice(-20);
 
   useEffect(() => {

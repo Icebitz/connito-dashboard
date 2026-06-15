@@ -1,7 +1,7 @@
 import { BarChart3, Clock3, Gauge, ShieldCheck, Trophy, Users } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { formatBlockDurationWithCount, formatInteger, formatNumber } from "../format";
+import { formatBlock, formatBlockDurationWithCount, formatInteger, formatNumber } from "../format";
 import type { DashboardModel } from "../types";
 
 type DataCardProps = {
@@ -47,7 +47,7 @@ export function OverviewGrid({ model, syncCounter, loading }: OverviewGridProps)
       <DataCard loading={loading} tone="miners" label="Miners" value={formatInteger(model.subnet.miners)} detail="registered on subnet" icon={<Users size={17} />} />
       <DataCard loading={loading} tone="validators" label="Validators" value={formatInteger(model.subnet.validators)} detail="active validator set" icon={<ShieldCheck size={17} />} />
       <DataCard loading={loading} tone="phase" label="Phase" value={model.phase.name} detail={`${formatBlockDurationWithCount(model.phase.blocksRemaining)} remaining`} icon={<Clock3 size={17} />} />
-      <DataCard loading={loading} tone="round" label="Round" value={formatInteger(model.round.id)} detail={`synced ${syncCounter}`} icon={<Trophy size={17} />} />
+      <DataCard loading={loading} tone="round" label="Round" value={formatBlock(model.round.id)} detail={`synced ${syncCounter}`} icon={<Trophy size={17} />} />
       <DataCard loading={loading} tone="score" label="Best Loss" value={formatNumber(model.metrics.bestLoss, 4)} detail={`avg ${formatNumber(model.metrics.averageLoss, 4)}`} icon={<Gauge size={17} />} />
       <DataCard loading={loading} tone="weight" label="Top Weight" value={formatNumber(model.metrics.topWeight, 4)} detail={`total ${formatNumber(model.metrics.totalWeight, 3)}`} icon={<BarChart3 size={17} />} />
     </section>

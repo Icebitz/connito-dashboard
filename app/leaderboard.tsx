@@ -121,29 +121,12 @@ export default function Leaderboard() {
         source={model.source}
         status={status}
         theme={theme}
+        activeTab={activeTab}
         loading={loading}
         onRefresh={() => void load()}
+        onTabChange={setActiveTab}
         onThemeToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")}
       />
-
-      <nav className="dashboard-tabs" aria-label="Dashboard views">
-        <button
-          type="button"
-          className={activeTab === "dashboard" ? "dashboard-tab-active" : undefined}
-          aria-pressed={activeTab === "dashboard"}
-          onClick={() => setActiveTab("dashboard")}
-        >
-          Dashboard
-        </button>
-        <button
-          type="button"
-          className={activeTab === "history" ? "dashboard-tab-active" : undefined}
-          aria-pressed={activeTab === "history"}
-          onClick={() => setActiveTab("history")}
-        >
-          History
-        </button>
-      </nav>
 
       {activeTab === "dashboard" ? (
         <>

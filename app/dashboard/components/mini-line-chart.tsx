@@ -38,7 +38,7 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [chartSize, setChartSize] = useState({ width: 960, height: 190 });
-  const visiblePoints = points.slice(-10);
+  const visiblePoints = points.slice(-20);
 
   useEffect(() => {
     const svg = svgRef.current;

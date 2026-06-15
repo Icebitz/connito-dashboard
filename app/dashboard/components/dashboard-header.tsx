@@ -7,10 +7,12 @@ type DashboardHeaderProps = {
   source: string;
   status: DashboardStatus;
   theme: Theme;
+  activeTab: "dashboard" | "history";
   loading: boolean;
   title?: string;
   subtitle?: string;
   onRefresh: () => void;
+  onTabChange: (tab: "dashboard" | "history") => void;
   onThemeToggle: () => void;
 };
 
@@ -19,10 +21,12 @@ export function DashboardHeader({
   source,
   status,
   theme,
+  activeTab,
   loading,
   title = "Connito Leaderboard",
   subtitle,
   onRefresh,
+  onTabChange,
   onThemeToggle
 }: DashboardHeaderProps) {
   return (
@@ -30,7 +34,27 @@ export function DashboardHeader({
       <div className="brand-block">
         <img className="brand-logo" src="/logo.svg" alt="" width="48" height="48" />
         <div className="brand-copy">
-          <h1>{title} <span>(SN{netuid})</span></h1>
+          <div className="brand-title-row">
+            <h1>{title} <span>(SN{netuid})</span></h1>
+            <nav className="dashboard-tabs dashboard-tabs-inline" aria-label="Dashboard views">
+              <button
+                type="button"
+                className={activeTab === "dashboard" ? "dashboard-tab-active" : undefined}
+                aria-pressed={activeTab === "dashboard"}
+                onClick={() => onTabChange("dashboard")}
+              >
+                Dashboard
+              </button>
+              <button
+                type="button"
+                className={activeTab === "history" ? "dashboard-tab-active" : undefined}
+                aria-pressed={activeTab === "history"}
+                onClick={() => onTabChange("history")}
+              >
+                History
+              </button>
+            </nav>
+          </div>
           {subtitle ? <p>{subtitle}</p> : null}
         </div>
       </div>

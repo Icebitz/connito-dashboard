@@ -28,7 +28,7 @@ export function RoundTrendSection({ points, loading }: RoundTrendSectionProps) {
         </>
       ) : (
         <>
-          <SectionTitle eyebrow="Round Trend" title="Round Loss" />
+          <SectionTitle eyebrow="Round Loss Trend" />
           <MiniLineChart points={points} />
         </>
       )}

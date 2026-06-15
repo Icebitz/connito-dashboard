@@ -3481,6 +3481,10 @@ thead .validator-5-column {
   background: rgba(90, 168, 255, 0.045);
 }
 
+.miner-history-table .validator-mini-card {
+  box-shadow: none;
+}
+
 .miner-history-time-cell {
   padding-left: 8px;
   background: var(--table-even);

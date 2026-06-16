@@ -2,9 +2,9 @@
   --bg: #07111d;
   --body-start: #0f1a2c;
   --body-end: #050911;
-  --panel: rgba(13, 20, 33, 0.54);
-  --panel-raised: rgba(18, 27, 42, 0.68);
-  --panel-soft: rgba(10, 16, 27, 0.42);
+  --panel: rgba(13, 20, 33, 0.34);
+  --panel-raised: rgba(18, 27, 42, 0.44);
+  --panel-soft: rgba(10, 16, 27, 0.22);
   --line: rgba(177, 214, 255, 0.16);
   --line-strong: rgba(130, 197, 255, 0.32);
   --text: #eef5ff;
@@ -24,25 +24,25 @@
   --scroll-track: rgba(7, 11, 18, 0.82);
   --scroll-thumb: rgba(172, 200, 233, 0.38);
   --scroll-thumb-hover: rgba(199, 224, 255, 0.6);
-  --panel-gradient-start: rgba(255, 255, 255, 0.1);
-  --panel-gradient-end: rgba(255, 255, 255, 0.03);
+  --panel-gradient-start: rgba(255, 255, 255, 0.06);
+  --panel-gradient-end: rgba(255, 255, 255, 0.015);
   --control-hover: rgba(120, 191, 255, 0.12);
   --focus-ring: rgba(90, 168, 255, 0.22);
   --notice-border: rgba(255, 101, 125, 0.34);
   --notice-bg: rgba(255, 101, 125, 0.1);
   --notice-text: #ffd5dc;
   --progress-bg: #09111a;
-  --chart-bg: rgba(9, 15, 25, 0.46);
+  --chart-bg: rgba(9, 15, 25, 0.24);
   --chart-area: rgba(90, 168, 255, 0.22);
   --chart-hover-line: rgba(70, 215, 210, 0.54);
   --chart-dot-stroke: #08101b;
-  --chart-tooltip-bg: rgba(13, 20, 33, 0.88);
-  --table-bg: rgba(8, 14, 23, 0.42);
-  --table-head-bg: rgba(18, 27, 42, 0.76);
+  --chart-tooltip-bg: rgba(13, 20, 33, 0.68);
+  --table-bg: rgba(8, 14, 23, 0.22);
+  --table-head-bg: rgba(18, 27, 42, 0.5);
   --table-text: #e8f1fb;
   --table-row-border: rgba(170, 202, 235, 0.12);
-  --table-even: rgba(255, 255, 255, 0.026);
-  --table-hover: rgba(104, 183, 255, 0.12);
+  --table-even: rgba(255, 255, 255, 0.01);
+  --table-hover: rgba(104, 183, 255, 0.06);
   --top-strip-border: rgba(73, 208, 139, 0.28);
   --top-strip-bg: rgba(73, 208, 139, 0.08);
   --phase-next-border: rgba(73, 208, 139, 0.48);
@@ -53,7 +53,7 @@
   --status-green-shadow: rgba(73, 208, 139, 0.16);
   --status-amber-shadow: rgba(240, 183, 91, 0.16);
   --status-red-shadow: rgba(255, 101, 125, 0.16);
-  --shadow: 0 22px 52px rgba(3, 8, 18, 0.34);
+  --shadow: 0 22px 52px rgba(3, 8, 18, 0.22);
   --radius: 18px;
   --gap: 16px;
   --panel-pad: 18px;
@@ -74,9 +74,9 @@
   --bg: #cfd9e7;
   --body-start: #edf2f8;
   --body-end: #c6d3e1;
-  --panel: rgba(248, 250, 254, 0.42);
-  --panel-raised: rgba(242, 246, 251, 0.6);
-  --panel-soft: rgba(241, 245, 250, 0.28);
+  --panel: rgba(248, 250, 254, 0.22);
+  --panel-raised: rgba(242, 246, 251, 0.34);
+  --panel-soft: rgba(241, 245, 250, 0.12);
   --line: rgba(92, 115, 146, 0.18);
   --line-strong: rgba(50, 85, 132, 0.28);
   --text: #122033;
@@ -96,25 +96,25 @@
   --scroll-track: rgba(213, 222, 233, 0.82);
   --scroll-thumb: rgba(108, 128, 154, 0.42);
   --scroll-thumb-hover: rgba(83, 106, 136, 0.58);
-  --panel-gradient-start: rgba(249, 251, 255, 0.58);
-  --panel-gradient-end: rgba(227, 235, 244, 0.34);
+  --panel-gradient-start: rgba(249, 251, 255, 0.28);
+  --panel-gradient-end: rgba(227, 235, 244, 0.14);
   --control-hover: rgba(96, 123, 159, 0.12);
   --focus-ring: rgba(50, 85, 132, 0.18);
   --notice-border: rgba(200, 53, 79, 0.34);
   --notice-bg: rgba(200, 53, 79, 0.08);
   --notice-text: #8a2135;
   --progress-bg: #e0e8f1;
-  --chart-bg: rgba(244, 248, 252, 0.42);
+  --chart-bg: rgba(244, 248, 252, 0.18);
   --chart-area: rgba(37, 111, 210, 0.16);
   --chart-hover-line: rgba(16, 141, 152, 0.52);
   --chart-dot-stroke: #ffffff;
-  --chart-tooltip-bg: rgba(248, 251, 255, 0.82);
-  --table-bg: rgba(247, 250, 254, 0.38);
-  --table-head-bg: rgba(233, 239, 247, 0.78);
+  --chart-tooltip-bg: rgba(248, 251, 255, 0.56);
+  --table-bg: rgba(247, 250, 254, 0.16);
+  --table-head-bg: rgba(233, 239, 247, 0.48);
   --table-text: #1c2a3b;
   --table-row-border: rgba(136, 154, 177, 0.18);
-  --table-even: rgba(21, 34, 54, 0.025);
-  --table-hover: rgba(37, 111, 210, 0.085);
+  --table-even: rgba(21, 34, 54, 0.01);
+  --table-hover: rgba(37, 111, 210, 0.045);
   --top-strip-border: rgba(22, 131, 90, 0.28);
   --top-strip-bg: rgba(22, 131, 90, 0.08);
   --phase-next-border: rgba(22, 131, 90, 0.42);
@@ -125,7 +125,7 @@
   --status-green-shadow: rgba(22, 131, 90, 0.14);
   --status-amber-shadow: rgba(165, 102, 8, 0.14);
   --status-red-shadow: rgba(200, 53, 79, 0.14);
-  --shadow: 0 22px 52px rgba(33, 45, 65, 0.14);
+  --shadow: 0 22px 52px rgba(33, 45, 65, 0.08);
 }
 
 * {
@@ -146,6 +146,8 @@ body {
     radial-gradient(circle at 85% 10%, rgba(45, 212, 191, 0.2), transparent 24%),
     radial-gradient(circle at 78% 82%, rgba(168, 85, 247, 0.18), transparent 28%),
     linear-gradient(180deg, var(--body-start) 0%, var(--bg) 48%, var(--body-end) 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   font-family: "Segoe UI", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   font-size: var(--font-md);
   line-height: 1.42;
@@ -333,7 +335,7 @@ h1 {
   padding: 3px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.06);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 10px 26px rgba(3, 8, 18, 0.1);
@@ -361,7 +363,7 @@ h1 {
 }
 
 .dashboard-tabs button:not(.dashboard-tab-active):hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--heading);
 }
 
@@ -630,7 +632,7 @@ h1 {
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .miner-history-meta-item em,
@@ -851,7 +853,7 @@ h1 {
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)), linear-gradient(180deg, var(--panel-gradient-start), var(--panel-gradient-end)), var(--panel);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)), linear-gradient(180deg, var(--panel-gradient-start), var(--panel-gradient-end)), var(--panel);
   box-shadow: var(--shadow);
   backdrop-filter: blur(20px) saturate(170%);
   -webkit-backdrop-filter: blur(20px) saturate(170%);
@@ -1235,7 +1237,7 @@ h1 {
   padding: 12px;
   border: 1px solid rgba(177, 214, 255, 0.16);
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--muted);
   transform: scale(var(--phase-card-scale));
   transform-origin: center;
@@ -1901,7 +1903,7 @@ h1 {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .metric-chart-head {
@@ -2583,7 +2585,15 @@ h1 {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  gap: 12px;
+  padding: 14px;
   border-radius: 0;
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.12), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(70, 215, 210, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(8, 14, 23, 0.84), rgba(6, 10, 18, 0.9));
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
 }
 
 .leaderboard-section-fullscreen .leaderboard-header,
@@ -2592,10 +2602,40 @@ h1 {
   flex: 0 0 auto;
 }
 
+.leaderboard-section-fullscreen .leaderboard-header,
+.leaderboard-section-fullscreen .leaderboard-summary-strip,
+.leaderboard-section-fullscreen .table-footer {
+  border: 1px solid rgba(177, 214, 255, 0.14);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px) saturate(165%);
+  -webkit-backdrop-filter: blur(18px) saturate(165%);
+}
+
+.leaderboard-section-fullscreen .leaderboard-header {
+  align-items: center;
+  margin-bottom: 0;
+  padding: 12px 14px;
+}
+
+.leaderboard-section-fullscreen .leaderboard-summary-strip {
+  margin-bottom: 0;
+  padding: 10px;
+}
+
+.leaderboard-section-fullscreen .table-footer {
+  margin-top: 0;
+  padding: 10px 14px;
+}
+
 .leaderboard-section-fullscreen .table-frame {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  border-color: rgba(177, 214, 255, 0.14);
+  background: rgba(10, 16, 27, 0.42);
+  box-shadow: var(--shadow);
 }
 
 .leaderboard-section-fullscreen .leaderboard-header {
@@ -2613,6 +2653,41 @@ h1 {
   grid-template-columns: minmax(116px, 0.36fr) minmax(190px, 0.9fr);
   align-items: center;
   gap: 8px;
+}
+
+.leaderboard-section-fullscreen .table-frame > table > thead th {
+  background: rgba(18, 27, 42, 0.88);
+}
+
+.leaderboard-section-fullscreen .table-frame > table > tbody > tr > td {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+:root[data-theme="light"] .leaderboard-section-fullscreen {
+  background:
+    radial-gradient(circle at top left, rgba(37, 111, 210, 0.14), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(16, 141, 152, 0.1), transparent 28%),
+    linear-gradient(180deg, rgba(246, 249, 253, 0.9), rgba(222, 231, 241, 0.94));
+}
+
+:root[data-theme="light"] .leaderboard-section-fullscreen .leaderboard-header,
+:root[data-theme="light"] .leaderboard-section-fullscreen .leaderboard-summary-strip,
+:root[data-theme="light"] .leaderboard-section-fullscreen .table-footer {
+  border-color: rgba(92, 115, 146, 0.18);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+:root[data-theme="light"] .leaderboard-section-fullscreen .table-frame {
+  border-color: rgba(92, 115, 146, 0.18);
+  background: rgba(255, 255, 255, 0.34);
+}
+
+:root[data-theme="light"] .leaderboard-section-fullscreen .table-frame > table > thead th {
+  background: rgba(236, 242, 249, 0.82);
+}
+
+:root[data-theme="light"] .leaderboard-section-fullscreen .table-frame > table > tbody > tr > td {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 table {

@@ -1280,16 +1280,30 @@ h1 {
   line-height: 1.12;
 }
 
-.phase-window-next-3 {
-  --phase-card-scale: 0.9;
-  opacity: 0.62;
+.phase-window-prev-1 {
+  --phase-card-scale: 1.02;
+  opacity: 0.92;
+  box-shadow: 0 8px 22px rgba(3, 9, 18, 0.12);
+  transform: scale(var(--phase-card-scale));
 }
 
-.phase-window-prev-1,
-.phase-window-next-1,
+.phase-window-next-1 {
+  --phase-card-scale: 1.2;
+  opacity: 0.92;
+  box-shadow: 0 8px 22px rgba(3, 9, 18, 0.12);
+  transform: translateX(32px) scale(var(--phase-card-scale));
+}
+
 .phase-window-next-2 {
-  --phase-card-scale: 0.97;
+  --phase-card-scale: 0.95;
   opacity: 0.82;
+  box-shadow: 0 8px 22px rgba(3, 9, 18, 0.12);
+  transform: translateX(40px) scale(var(--phase-card-scale));
+}
+
+.phase-window-next-3 {
+  --phase-card-scale: 0.8;
+  opacity: 0.72;
 }
 
 .phase-window-current {

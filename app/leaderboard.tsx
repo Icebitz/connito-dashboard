@@ -111,7 +111,8 @@ export default function Leaderboard() {
   const fetchedAtMs = model.fetchedAt ? new Date(model.fetchedAt).getTime() : Number.NaN;
   const hasSyncedAt = Number.isFinite(fetchedAtMs);
   const lastSync = hasSyncedAt ? new Date(fetchedAtMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
-  const syncCounter = hasSyncedAt ? `${formatDuration(nowMs - fetchedAtMs)} ago` : "-";
+  const nextSyncMs = hasSyncedAt ? fetchedAtMs + REFRESH_MS : Number.NaN;
+  const syncCounter = hasSyncedAt ? `${formatDuration(Math.max(0, nextSyncMs - nowMs))} left` : "-";
   const firstLoad = loading && leaderboard === null;
 
   return (
@@ -131,7 +132,7 @@ export default function Leaderboard() {
       {activeTab === "dashboard" ? (
         <>
           <OverviewGrid model={model} syncCounter={syncCounter} loading={firstLoad} />
-          <PhasePanels phase={model.phase} loading={firstLoad} loadingUpcoming={firstLoad} />
+          <PhasePanels phase={model.phase} fetchedAt={model.fetchedAt} nowMs={nowMs} loading={firstLoad} />
           <section className="round-row" aria-label="Round loss and health">
             <RoundTrendSection points={model.round.history} loading={firstLoad} />
             <RoundHealthPanel round={model.round} scoredPercent={scoredPercent} loading={firstLoad} />
@@ -152,7 +153,7 @@ export default function Leaderboard() {
         </>
       ) : (
         <>
-          <PhasePanels phase={model.phase} loading={firstLoad} loadingUpcoming={firstLoad} />
+          <PhasePanels phase={model.phase} fetchedAt={model.fetchedAt} nowMs={nowMs} loading={firstLoad} />
           <MinerHistoryTab selectedMinerUids={historyMinerUids} />
         </>
       )}
@@ -163,7 +164,7 @@ export default function Leaderboard() {
         </div>
         <div className="site-footer-meta">
           <span>Status {status}</span>
-          <span>Synced {syncCounter}</span>
+          <span>Next sync {syncCounter}</span>
           <span>Last updated {lastSync}</span>
           <span>Subnet {model.subnet.netuid}</span>
         </div>

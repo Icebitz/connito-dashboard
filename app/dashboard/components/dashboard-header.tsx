@@ -1,4 +1,4 @@
-import { Database, ExternalLink, Moon, RefreshCw, Sun } from "lucide-react";
+import { Database, ExternalLink, GitFork, Moon, RefreshCw, Sun } from "lucide-react";
 
 import type { DashboardStatus, Theme } from "../types";
 
@@ -63,6 +63,11 @@ export function DashboardHeader({
         <a className="api-button" href={source} target="_blank" rel="noreferrer" aria-label="Open leaderboard API source">
           <Database size={15} />
           API
+          <ExternalLink size={13} />
+        </a>
+        <a className="api-button" href="https://github.com/Connito-AI/Connito" target="_blank" rel="noreferrer" aria-label="Open Connito GitHub repository">
+          <GitFork size={15} />
+          GitHub
           <ExternalLink size={13} />
         </a>
         <button

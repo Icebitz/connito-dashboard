@@ -1,14 +1,16 @@
 import { Activity, CheckCircle2, Database, Gauge, Users, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 
+import { BLOCK_TIME_SECONDS } from "../constants";
 import { formatBlock, formatBlockDuration, formatInteger, formatNumber } from "../format";
 import type { DashboardModel } from "../types";
 import { SectionTitle } from "./section-title";
 
 type PhasePanelsProps = {
   phase: DashboardModel["phase"];
+  fetchedAt: string | null;
+  nowMs: number;
   loading: boolean;
-  loadingUpcoming: boolean;
 };
 
 type RoundHealthPanelProps = {
@@ -33,23 +35,9 @@ type PhaseWindowItem = {
 
 const PHASE_LIST = ["Distribute", "Train", "MinerCommit1", "MinerCommit2", "Submission", "Validate", "Merge", "ValidatorCommit1", "ValidatorCommit2"] as const;
 
-export function PhasePanels({ phase, loading, loadingUpcoming }: PhasePanelsProps) {
-  const phaseKey = `${phase.name}-${phase.phaseStart ?? "start"}-${phase.phaseEnd ?? "end"}`;
-  const previousPhaseKey = useRef(phaseKey);
-  const [moving, setMoving] = useState(false);
+export function PhasePanels({ phase, fetchedAt, nowMs, loading }: PhasePanelsProps) {
   const phaseWindow = useMemo(() => getPhaseWindow(phase), [phase]);
-
-  useEffect(() => {
-    if (previousPhaseKey.current === phaseKey) {
-      return;
-    }
-
-    previousPhaseKey.current = phaseKey;
-    setMoving(true);
-    const timer = window.setTimeout(() => setMoving(false), 760);
-
-    return () => window.clearTimeout(timer);
-  }, [phaseKey]);
+  const elapsedBlocks = getElapsedBlocks(fetchedAt, nowMs);
 
   return (
     <section className="work-grid">
@@ -58,10 +46,8 @@ export function PhasePanels({ phase, loading, loadingUpcoming }: PhasePanelsProp
       ) : (
         <article className="phase-panel">
           <SectionTitle eyebrow="Phase Cycle" />
-          <div className={`phase-window${moving || loadingUpcoming ? " phase-window-moving" : ""}`} aria-label="Phase cycle">
+          <div className="phase-window" aria-label="Phase cycle">
             {phaseWindow.map((item) => {
-              const progress = item.progress ?? 0;
-
               return (
                 <article
                   className={`phase-window-card phase-window-${getPhasePositionClass(item.position)}`}
@@ -72,20 +58,23 @@ export function PhasePanels({ phase, loading, loadingUpcoming }: PhasePanelsProp
                   <strong>{item.name}</strong>
                   {item.position === 0 ? (
                     <div className="phase-window-progress">
-                      <div className="progress-track phase-window-progress-track" title={`${formatNumber(progress, 1)}% complete, ${formatBlockDuration(item.blocksRemaining)} remaining`}>
-                        <i style={{ width: `${progress}%` }} />
+                      <div
+                        className="progress-track phase-window-progress-track"
+                        title={`${formatNumber(getCurrentProgress(item, elapsedBlocks), 1)}% complete, ${formatBlockDuration(getLiveBlocks(item.blocksRemaining, elapsedBlocks))} remaining`}
+                      >
+                        <i style={{ width: `${getCurrentProgress(item, elapsedBlocks)}%` }} />
                       </div>
                     </div>
                   ) : null}
                   <div className="phase-window-meta">
                     {item.position === 0 ? (
                       <>
-                        <em>{formatNumber(progress, 1)}%</em>
-                        <small>{formatBlockDuration(item.blocksRemaining)} left</small>
+                        <em>{formatNumber(getCurrentProgress(item, elapsedBlocks), 1)}%</em>
+                        <small>{formatBlockDuration(getLiveBlocks(item.blocksRemaining, elapsedBlocks))} left</small>
                       </>
                     ) : item.position > 0 ? (
                       <>
-                        <em>{formatBlockDuration(item.blocksUntilStart)}</em>
+                        <em>{formatBlockDuration(getLiveBlocks(item.blocksUntilStart, elapsedBlocks))}</em>
                         <small>starts</small>
                       </>
                     ) : (
@@ -113,6 +102,42 @@ export function PhasePanels({ phase, loading, loadingUpcoming }: PhasePanelsProp
       )}
     </section>
   );
+}
+
+function getElapsedBlocks(fetchedAt: string | null, nowMs: number) {
+  if (!fetchedAt) {
+    return 0;
+  }
+
+  const fetchedAtMs = new Date(fetchedAt).getTime();
+  if (!Number.isFinite(fetchedAtMs)) {
+    return 0;
+  }
+
+  return Math.max(0, (nowMs - fetchedAtMs) / (BLOCK_TIME_SECONDS * 1000));
+}
+
+function getLiveBlocks(blocks: number | null, elapsedBlocks: number) {
+  if (blocks === null) {
+    return null;
+  }
+
+  return Math.max(0, blocks - elapsedBlocks);
+}
+
+function getCurrentProgress(item: PhaseWindowItem, elapsedBlocks: number) {
+  if (item.position !== 0) {
+    return item.progress ?? 0;
+  }
+
+  const blocksInto = item.headBlock !== null && item.startBlock !== null ? item.headBlock - item.startBlock : null;
+  const totalBlocks = blocksInto !== null && item.blocksRemaining !== null ? blocksInto + item.blocksRemaining : null;
+
+  if (blocksInto === null || totalBlocks === null || totalBlocks <= 0) {
+    return item.progress ?? 0;
+  }
+
+  return Math.max(0, Math.min(100, ((blocksInto + elapsedBlocks) / totalBlocks) * 100));
 }
 
 function getPhaseWindow(phase: DashboardModel["phase"]): PhaseWindowItem[] {
@@ -201,21 +226,52 @@ function getPhasePositionClass(position: PhaseWindowItem["position"]) {
 }
 
 function PhasePanelSkeleton() {
+  const skeletonCards = [
+    { key: "prev", className: "prev-1", label: "Prev", name: "Loading" },
+    { key: "current", className: "current", label: "Current", name: "Loading" },
+    { key: "next-1", className: "next-1", label: "Next", name: "Loading" },
+    { key: "next-2", className: "next-2", label: "Next +1", name: "Loading" },
+    { key: "next-3", className: "next-3", label: "Next +2", name: "Loading" }
+  ] as const;
+
   return (
     <article className="phase-panel phase-panel-skeleton" aria-busy="true" aria-label="Loading current phase">
       <div className="section-title section-title-skeleton" aria-hidden="true">
         <span />
         <h2 />
       </div>
-      <div className="progress-track progress-track-skeleton" aria-hidden="true">
-        <i />
-      </div>
-      <div className="phase-stats">
-        {["Head", "Start", "End"].map((label) => (
-          <div className="phase-stat-skeleton" key={label} aria-hidden="true">
-            <span />
-            <strong />
-          </div>
+      <div className="phase-window phase-window-skeleton" aria-hidden="true">
+        {skeletonCards.map((item) => (
+          <article
+            className={`phase-window-card phase-window-skeleton-card phase-window-${item.className}`}
+            key={item.key}
+          >
+            <span>{item.label}</span>
+            <strong>{item.name}</strong>
+            {item.key === "current" ? (
+              <>
+                <div className="phase-window-skeleton-progress">
+                  <div className="progress-track progress-track-skeleton">
+                    <i />
+                  </div>
+                </div>
+                <div className="phase-window-meta phase-window-skeleton-meta">
+                  <em />
+                  <small />
+                </div>
+                <div className="phase-window-blocks phase-window-blocks-inline phase-window-skeleton-blocks">
+                  <span className="phase-window-block-value" />
+                  <span className="phase-window-block-separator">-</span>
+                  <span className="phase-window-block-value" />
+                </div>
+              </>
+            ) : (
+              <div className="phase-window-meta phase-window-skeleton-meta">
+                <em />
+                <small />
+              </div>
+            )}
+          </article>
         ))}
       </div>
     </article>

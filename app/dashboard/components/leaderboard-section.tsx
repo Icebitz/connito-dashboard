@@ -3,9 +3,10 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { ReactNode } from "react";
 
 import { LEADERBOARD_COLUMN_COUNT, LEADERBOARD_VIEW_UIDS_STORAGE_KEY, VALIDATOR_COLUMNS } from "../constants";
-import { formatBlockDuration, formatInteger, formatMetricNumber, formatNumber, formatPercent, formatRepoRevision, getHotkeyUrl, getHuggingFaceRevisionUrl, shortText } from "../format";
+import { formatBlockDuration, formatInteger, formatMetricNumber, formatNumber, formatPercent, formatRepoRevision, getHuggingFaceRevisionUrl, shortText } from "../format";
 import { getMinerKey } from "../model";
 import type { DashboardModel, MinerRow, Theme, ValidatorHealth, ValidatorMetric } from "../types";
+import { CopyHotkeyButton } from "./copy-hotkey-button";
 import { MinerDetailsModal } from "./miner-details-modal";
 import { SectionTitle } from "./section-title";
 
@@ -679,12 +680,17 @@ function LeaderboardSummaryStrip({ rows, burnPercent, meta }: LeaderboardSummary
             const tone = getValidatorTone(health);
             const label = health?.label ?? metric?.label ?? `val-${String(index + 1).padStart(2, "0")}`;
             const hotkey = health?.hotkey ?? (metric?.hotkey && metric.hotkey !== "-" ? metric.hotkey : null);
-            const hotkeyLabel = hotkey ? shortText(hotkey, 8, 6) : "-";
 
             return (
               <span className={`validator-health-row validator-health-${tone}`} key={`validator-health-${index}`} title={`Validator ${index + 1}: ${formatValidatorStatus(health?.status)}${hotkey ? `, hotkey ${hotkey}` : ""}`}>
                 <strong>{label}</strong>
-                <small>{hotkeyLabel}</small>
+                <small>
+                  {hotkey ? (
+                    <CopyHotkeyButton value={hotkey} className="validator-health-hotkey-button" start={8} end={6} />
+                  ) : (
+                    "-"
+                  )}
+                </small>
                 <i aria-hidden="true" />
               </span>
             );
@@ -718,7 +724,6 @@ type LeaderboardRowProps = {
 };
 
 function LeaderboardRow({ row, validatorHealth, monitored, onInspectRow, onToggleViewList, rowRef }: LeaderboardRowProps) {
-  const hotkeyUrl = getHotkeyUrl(row.hotkey);
   const repoRevisionUrl = getHuggingFaceRevisionUrl(row.repo, row.revision);
   const repoRevisionLabel = formatRepoRevision(row.repo, row.revision);
   const rowKey = getMinerKey(row);
@@ -769,11 +774,7 @@ function LeaderboardRow({ row, validatorHealth, monitored, onInspectRow, onToggl
       <td className="miner-column" data-label="Miner" title={`${row.hotkey} ${repoRevisionLabel}`}>
         <div className="miner-cell">
           <strong>
-            {hotkeyUrl ? (
-              <a className="table-link" href={hotkeyUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-                {shortText(row.hotkey, 8, 6)}
-              </a>
-            ) : shortText(row.hotkey, 8, 6)}
+            <CopyHotkeyButton value={row.hotkey} className="table-link hotkey-copy-button" start={8} end={6} />
           </strong>
           <span>
             {repoRevisionUrl ? (

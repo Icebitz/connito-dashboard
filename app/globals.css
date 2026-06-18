@@ -2948,6 +2948,51 @@ tbody td {
   white-space: nowrap;
 }
 
+.hotkey-copy-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  color: var(--table-text);
+  font: inherit;
+  font-weight: 800;
+  text-decoration: none;
+  text-align: left;
+  cursor: copy;
+  white-space: nowrap;
+}
+
+.hotkey-copy-button:hover {
+  color: var(--cyan);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hotkey-copy-button:focus-visible {
+  outline: 2px solid rgba(70, 215, 210, 0.4);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.miner-details-shell-value.hotkey-copy-button {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.validator-health-hotkey-button {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.miner-history-identity .hotkey-copy-button {
+  color: var(--heading);
+}
+
 .miner-column {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
@@ -3286,19 +3331,33 @@ tbody td {
   font-weight: 900;
 }
 
-.miner-details-shell-row {
-  color: var(--muted);
-  font-size: var(--font-xs);
-  font-weight: 800;
-  white-space: normal;
+.miner-details-shell-title-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
 }
 
-.miner-details-shell-hotkey {
+.miner-details-shell-label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.miner-details-shell-value {
   color: var(--heading);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 900;
   letter-spacing: 0.01em;
-  word-break: break-all;
+}
+
+.miner-details-shell-divider {
+  color: rgba(177, 214, 255, 0.36);
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .miner-details-close {
@@ -3348,22 +3407,6 @@ tbody td {
   font-weight: 900;
 }
 
-.miner-details-shell-repo {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-}
-
-.miner-details-shell-repo strong {
-  color: var(--heading);
-  font-weight: 900;
-}
-
-.miner-details-shell-spacer {
-  width: 14px;
-}
-
 .miner-details-meta-row {
   display: flex;
   flex-wrap: wrap;
@@ -3406,8 +3449,9 @@ tbody td {
 }
 
 .miner-details-loss-chart {
+  position: relative;
   width: 100%;
-  max-height: 150px;
+  overflow: visible;
 }
 
 .miner-details-loss-chart svg {
@@ -3421,8 +3465,13 @@ tbody td {
   stroke-width: 1;
 }
 
+.miner-details-chart-grid-line {
+  stroke: rgba(177, 214, 255, 0.1);
+  stroke-width: 1;
+}
+
 .miner-details-chart-area {
-  fill: rgba(90, 168, 255, 0.16);
+  fill: rgba(90, 168, 255, 0.18);
 }
 
 .miner-details-chart-line {
@@ -3433,10 +3482,54 @@ tbody td {
   stroke-linejoin: round;
 }
 
+.miner-details-chart-hover-line {
+  stroke: rgba(177, 214, 255, 0.5);
+  stroke-width: 1.1;
+  stroke-dasharray: 5 5;
+  stroke-linecap: round;
+  shape-rendering: geometricPrecision;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
 .miner-details-chart-point {
   fill: #0b1320;
   stroke: var(--blue);
   stroke-width: 1.6;
+}
+
+.miner-details-chart-point-active {
+  fill: var(--blue);
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 2;
+}
+
+.miner-details-chart-point-missing {
+  fill: var(--red);
+  stroke: rgba(255, 255, 255, 0.28);
+  stroke-width: 1.25;
+}
+
+.miner-details-chart-tick {
+  stroke: rgba(177, 214, 255, 0.22);
+  stroke-width: 1;
+}
+
+.miner-details-chart-grid text,
+.miner-details-chart-tick + text {
+  fill: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.miner-details-chart-tooltip-svg rect {
+  fill: rgba(9, 14, 23, 0.96);
+  stroke: rgba(177, 214, 255, 0.18);
+}
+
+.miner-details-chart-tooltip-svg text {
+  fill: var(--heading);
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .miner-details-empty {

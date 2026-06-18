@@ -21,9 +21,16 @@ export type MinerRow = {
   lastObservedCommitBlock: number | null;
   lastObservedCommitBlockLag: number | null;
   committedRecently: boolean | null;
+  committedThisCycle: boolean | null;
+  evaluatedThisRound: boolean | null;
   score: number | null;
   loss: number | null;
   deltaLoss: number | null;
+  scoreLatestAgeSeconds: number | null;
+  incentive: number | null;
+  lossTrend: Array<number | null>;
+  assignedValidatorSlots: number[];
+  verdictByValidatorSlots: number[];
   weight: number | null;
   evaluations: number | null;
   assigned: boolean | null;
@@ -41,6 +48,7 @@ export type ValidatorMetric = {
   scoreLatest: number | null;
   scoreAverage: number | null;
   scoreSamples: number | null;
+  scoreLatestAgeSeconds: number | null;
   valLoss: number | null;
   weightSubmitted: number | null;
   extractedAtBlock: number | null;

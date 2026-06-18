@@ -1,11 +1,13 @@
 import { AlertTriangle, ChevronLeft, ChevronRight, Eye, EyeOff, History, Maximize2, Minimize2, Moon, Search, ShieldCheck, Sun, X } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { LEADERBOARD_COLUMN_COUNT, LEADERBOARD_VIEW_UIDS_STORAGE_KEY, VALIDATOR_COLUMNS } from "../constants";
-import { formatBlockDuration, formatInteger, formatMetricNumber, formatNumber, formatPercent, formatRepoRevision, getHotkeyUrl, getHuggingFaceRevisionUrl, shortText } from "../format";
+import { formatBlockDuration, formatInteger, formatMetricNumber, formatNumber, formatPercent, formatRepoRevision, getHuggingFaceRevisionUrl, shortText } from "../format";
 import { getMinerKey } from "../model";
 import type { DashboardModel, MinerRow, Theme, ValidatorHealth, ValidatorMetric } from "../types";
+import { CopyHotkeyButton } from "./copy-hotkey-button";
+import { MinerDetailsModal } from "./miner-details-modal";
 import { SectionTitle } from "./section-title";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, "all"] as const;
@@ -327,6 +329,8 @@ export function LeaderboardSection({
   const [viewListHydrated, setViewListHydrated] = useState(false);
   const [showViewListOnly, setShowViewListOnly] = useState(false);
   const [sort, setSort] = useState<LeaderboardSort>({ key: "rank", direction: "asc" });
+  const [detailUid, setDetailUid] = useState<string | null>(null);
+  const closeDetails = useCallback(() => setDetailUid(null), []);
   const viewListItems = useMemo(() => {
     const rowsByUid = new Map(allRows.map((row) => [row.uid, row]));
     return viewListUids.map((uid) => ({ uid, row: rowsByUid.get(uid) }));
@@ -346,6 +350,7 @@ export function LeaderboardSection({
     () => isAllRows ? sortedRows : sortedRows.slice(pageStart, pageStart + pageSize),
     [isAllRows, pageSize, pageStart, sortedRows]
   );
+  const selectedRow = useMemo(() => detailUid ? allRows.find((row) => row.uid === detailUid) ?? null : null, [allRows, detailUid]);
   const visibleStart = totalRows ? pageStart + 1 : 0;
   const visibleEnd = isAllRows ? totalRows : Math.min(pageStart + pageSize, totalRows);
   const emptyLeaderboardMessage = showViewListOnly ? "No selected miners match the current search." : "No miners match the current search.";
@@ -522,6 +527,7 @@ export function LeaderboardSection({
                 row={row}
                 validatorHealth={meta.validatorHealth}
                 monitored={viewListUidSet.has(row.uid)}
+                onInspectRow={() => setDetailUid(row.uid)}
                 onToggleViewList={toggleViewListMiner}
                 rowRef={registerRowRef(getMinerKey(row))}
               />
@@ -534,6 +540,15 @@ export function LeaderboardSection({
           </tbody>
         </table>
       </div>
+
+      {selectedRow ? (
+        <MinerDetailsModal
+          row={selectedRow}
+          validatorHealth={meta.validatorHealth}
+          onClose={closeDetails}
+          onOpenHistory={onOpenHistory}
+        />
+      ) : null}
 
       <div className="table-footer" aria-label="Leaderboard pagination">
         <span>
@@ -665,12 +680,17 @@ function LeaderboardSummaryStrip({ rows, burnPercent, meta }: LeaderboardSummary
             const tone = getValidatorTone(health);
             const label = health?.label ?? metric?.label ?? `val-${String(index + 1).padStart(2, "0")}`;
             const hotkey = health?.hotkey ?? (metric?.hotkey && metric.hotkey !== "-" ? metric.hotkey : null);
-            const hotkeyLabel = hotkey ? shortText(hotkey, 8, 6) : "-";
 
             return (
               <span className={`validator-health-row validator-health-${tone}`} key={`validator-health-${index}`} title={`Validator ${index + 1}: ${formatValidatorStatus(health?.status)}${hotkey ? `, hotkey ${hotkey}` : ""}`}>
                 <strong>{label}</strong>
-                <small>{hotkeyLabel}</small>
+                <small>
+                  {hotkey ? (
+                    <CopyHotkeyButton value={hotkey} className="table-link hotkey-copy-button" start={8} end={6} />
+                  ) : (
+                    "-"
+                  )}
+                </small>
                 <i aria-hidden="true" />
               </span>
             );
@@ -698,12 +718,12 @@ type LeaderboardRowProps = {
   row: MinerRow;
   validatorHealth: ValidatorHealth[];
   monitored: boolean;
+  onInspectRow: () => void;
   onToggleViewList: (row: MinerRow) => void;
   rowRef: (node: HTMLTableRowElement | null) => void;
 };
 
-function LeaderboardRow({ row, validatorHealth, monitored, onToggleViewList, rowRef }: LeaderboardRowProps) {
-  const hotkeyUrl = getHotkeyUrl(row.hotkey);
+function LeaderboardRow({ row, validatorHealth, monitored, onInspectRow, onToggleViewList, rowRef }: LeaderboardRowProps) {
   const repoRevisionUrl = getHuggingFaceRevisionUrl(row.repo, row.revision);
   const repoRevisionLabel = formatRepoRevision(row.repo, row.revision);
   const rowKey = getMinerKey(row);
@@ -713,7 +733,19 @@ function LeaderboardRow({ row, validatorHealth, monitored, onToggleViewList, row
   const rowDeltaLoss = formatLeaderboardMetricNumber(row.deltaLoss, 4);
 
   return (
-    <tr ref={rowRef} className={`leaderboard-row${monitored ? " leaderboard-row-monitored" : ""}`}>
+    <tr
+      ref={rowRef}
+      className={`leaderboard-row${monitored ? " leaderboard-row-monitored" : ""}`}
+      onClick={onInspectRow}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onInspectRow();
+        }
+      }}
+    >
       <td className="rank-column" data-label="Rank">
         <div className="rank-cell">
           <button
@@ -742,11 +774,7 @@ function LeaderboardRow({ row, validatorHealth, monitored, onToggleViewList, row
       <td className="miner-column" data-label="Miner" title={`${row.hotkey} ${repoRevisionLabel}`}>
         <div className="miner-cell">
           <strong>
-            {hotkeyUrl ? (
-              <a className="table-link" href={hotkeyUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-                {shortText(row.hotkey, 8, 6)}
-              </a>
-            ) : shortText(row.hotkey, 8, 6)}
+            <CopyHotkeyButton value={row.hotkey} className="table-link hotkey-copy-button" start={8} end={6} />
           </strong>
           <span>
             {repoRevisionUrl ? (
@@ -944,6 +972,27 @@ function MetricStatusMarker({ status }: { status: string | null | undefined }) {
 
 function formatAssignmentRole(role: string | null | undefined) {
   return role ? role.replace(/_/g, " ") : "-";
+}
+
+function formatScoreAge(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "-";
+  }
+
+  if (value < 60) {
+    return `${formatNumber(value, 1)}s`;
+  }
+
+  const minutes = Math.floor(value / 60);
+  const seconds = Math.round(value % 60);
+
+  if (minutes < 60) {
+    return `${minutes}m ${seconds}s`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return `${hours}h ${remainingMinutes}m`;
 }
 
 function formatValidatorRank(metric: ValidatorMetric) {

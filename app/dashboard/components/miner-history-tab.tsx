@@ -7,6 +7,7 @@ import { VALIDATOR_COLUMNS } from "../constants";
 import { formatDuration, formatInteger, formatMetricNumber, formatNumber, shortText } from "../format";
 import { Notice } from "./notice";
 import { SectionTitle } from "./section-title";
+import { CopyHotkeyButton } from "./copy-hotkey-button";
 
 type MinerHistoryTabProps = {
   selectedMinerUids: string[];
@@ -161,7 +162,14 @@ export function MinerHistoryTab({ selectedMinerUids }: MinerHistoryTabProps) {
                   onSelect={setHistoryPageIndex}
                 />
                 <div className="miner-history-identity">
-                  <strong>{visibleHistoryModel?.hotkey ? shortText(visibleHistoryModel.hotkey, 18, 8) : "Hotkey -"}</strong>
+                  <strong>
+                    <CopyHotkeyButton
+                      value={visibleHistoryModel?.hotkey ?? "-"}
+                      className="hotkey-copy-button"
+                      start={18}
+                      end={8}
+                    />
+                  </strong>
                   <span>{visibleHistoryModel?.servedFrom ? `served from ${visibleHistoryModel.servedFrom}` : "series history"}</span>
                 </div>
               </div>

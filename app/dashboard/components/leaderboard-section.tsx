@@ -686,7 +686,7 @@ function LeaderboardSummaryStrip({ rows, burnPercent, meta }: LeaderboardSummary
                 <strong>{label}</strong>
                 <small>
                   {hotkey ? (
-                    <CopyHotkeyButton value={hotkey} className="validator-health-hotkey-button" start={8} end={6} />
+                    <CopyHotkeyButton value={hotkey} className="table-link hotkey-copy-button" start={8} end={6} />
                   ) : (
                     "-"
                   )}

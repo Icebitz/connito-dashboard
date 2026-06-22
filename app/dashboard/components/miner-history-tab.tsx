@@ -112,7 +112,7 @@ export function MinerHistoryTab({ selectedMinerUids }: MinerHistoryTabProps) {
   );
   const latestFetchedAt = getLatestFetchedAt(historyModels);
   const fetchedAtMs = latestFetchedAt ? new Date(latestFetchedAt).getTime() : Number.NaN;
-  const syncCounter = Number.isFinite(fetchedAtMs) ? `${formatDuration(nowMs - fetchedAtMs)} ago` : "-";
+  const syncCounter = Number.isFinite(fetchedAtMs) ? formatAgeSeconds(nowMs - fetchedAtMs) : "-";
   const pageUids = activeMinerUids.length ? activeMinerUids : historyModels.map((historyModel) => historyModel.minerUid);
   const historyPageCount = pageUids.length;
   const boundedHistoryPageIndex = historyPageCount ? Math.min(historyPageIndex, historyPageCount - 1) : 0;
@@ -145,7 +145,7 @@ export function MinerHistoryTab({ selectedMinerUids }: MinerHistoryTabProps) {
           </label>
           <button type="submit" className="miner-history-search-button">History</button>
         </form>
-        <span>Synced {syncCounter}</span>
+        <span>Synced {syncCounter} ago</span>
       </div>
 
       <Notice message={error} />
@@ -209,6 +209,19 @@ function HistoryMeta({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </span>
   );
+}
+
+function formatAgeSeconds(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "-";
+  }
+
+  const totalSeconds = Math.max(0, Math.round(value));
+  const hours = Math.floor(totalSeconds / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
 }
 
 function MinerHistoryPager({ uids, activeIndex, onSelect }: { uids: string[]; activeIndex: number; onSelect: (index: number) => void }) {

@@ -124,7 +124,7 @@ export function MinerDetailsModal({ row, validatorHealth, onClose, onOpenHistory
                   {validatorRows.map(({ index, metric, health }) => (
                     <tr key={`${row.uid}-validator-${index}`}>
                       <td>{index + 1}</td>
-                      <td>{metric?.uid ?? health?.uid ?? "-"}</td>
+                      <td>{metric?.chainUid ?? metric?.uid ?? health?.uid ?? "-"}</td>
                       <td>
                         <CopyHotkeyButton value={metric?.hotkey ?? health?.hotkey ?? "-"} className="hotkey-copy-button" start={6} end={4} />
                       </td>
@@ -362,5 +362,10 @@ function formatAgeSeconds(value: number | null | undefined) {
     return "-";
   }
 
-  return `${Math.max(0, Math.round(value))}s`;
+  const totalSeconds = Math.max(0, Math.round(value));
+  const hours = Math.floor(totalSeconds / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
 }

@@ -111,8 +111,7 @@ export default function Leaderboard() {
   const fetchedAtMs = model.fetchedAt ? new Date(model.fetchedAt).getTime() : Number.NaN;
   const hasSyncedAt = Number.isFinite(fetchedAtMs);
   const lastSync = hasSyncedAt ? new Date(fetchedAtMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
-  const nextSyncMs = hasSyncedAt ? fetchedAtMs + REFRESH_MS : Number.NaN;
-  const syncCounter = hasSyncedAt ? `${formatDuration(Math.max(0, nextSyncMs - nowMs))} left` : "-";
+  const syncCounter = hasSyncedAt ? formatDuration(Math.max(0, nowMs - fetchedAtMs)) : "-";
   const firstLoad = loading && leaderboard === null;
 
   return (
@@ -164,7 +163,7 @@ export default function Leaderboard() {
         </div>
         <div className="site-footer-meta">
           <span>Status {status}</span>
-          <span>Next sync {syncCounter}</span>
+          <span>Synced {syncCounter} ago</span>
           <span>Last updated {lastSync}</span>
           <span>Subnet {model.subnet.netuid}</span>
         </div>

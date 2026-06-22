@@ -23,7 +23,7 @@ export function CompactMeta({
 }: CompactMetaProps) {
   return (
     <section className="compact-meta" aria-label="Dashboard details">
-      <span title={lastSync === "-" ? undefined : `Last sync ${lastSync}`}>Next sync {syncCounter}</span>
+      <span title={lastSync === "-" ? undefined : `Last sync ${lastSync}`}>Synced {syncCounter} ago</span>
       <span>{formatInteger(shownRows)} shown</span>
       <span>{formatInteger(totalRows)} rows</span>
       <span>{formatInteger(assignedRows)} assigned</span>

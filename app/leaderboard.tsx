@@ -4,13 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { DashboardHeader } from "./dashboard/components/dashboard-header";
 import { LeaderboardSection } from "./dashboard/components/leaderboard-section";
-import { MetricChartsSection } from "./dashboard/components/metric-charts-section";
 import { MinerHistoryTab } from "./dashboard/components/miner-history-tab";
 import { OverviewGrid } from "./dashboard/components/overview-grid";
 import { PhasePanels, RoundHealthPanel } from "./dashboard/components/phase-panels";
-import { RoundTrendSection } from "./dashboard/components/round-trend-section";
 import { REFRESH_MS, SYNC_COUNTER_MS, THEME_STORAGE_KEY } from "./dashboard/constants";
-import { formatAgeSecondsShort } from "./dashboard/format";
+import { formatAgeSecondsShort, formatBlock } from "./dashboard/format";
 import { buildDashboardModel } from "./dashboard/model";
 import type { ApiResponse, DashboardStatus, Theme } from "./dashboard/types";
 
@@ -113,6 +111,7 @@ export default function Leaderboard() {
   const lastSync = hasSyncedAt ? new Date(fetchedAtMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
   const syncCounter = hasSyncedAt ? formatAgeSecondsShort(Math.max(0, (nowMs - fetchedAtMs) / 1000)) : "-";
   const firstLoad = loading && leaderboard === null;
+  const headerSubtitle = `Cycle #${formatBlock(model.phase.cycleIndex)} · Head Block ${formatBlock(model.phase.headBlock)} · Blocks Remaining ${formatBlock(model.phase.blocksRemaining)}`;
 
   return (
     <main className="dashboard-shell">
@@ -123,6 +122,7 @@ export default function Leaderboard() {
         theme={theme}
         activeTab={activeTab}
         loading={loading}
+        subtitle={headerSubtitle}
         onRefresh={() => void load()}
         onTabChange={setActiveTab}
         onThemeToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")}
@@ -131,18 +131,19 @@ export default function Leaderboard() {
       {activeTab === "dashboard" ? (
         <>
           <OverviewGrid model={model} syncCounter={syncCounter} loading={firstLoad} />
-          <PhasePanels phase={model.phase} fetchedAt={model.fetchedAt} nowMs={nowMs} loading={firstLoad} />
-          <section className="round-row" aria-label="Round loss and health">
-            <RoundTrendSection points={model.round.history} loading={firstLoad} />
-            <RoundHealthPanel round={model.round} scoredPercent={scoredPercent} loading={firstLoad} />
-          </section>
-          <MetricChartsSection rows={model.rows} />
+          <RoundHealthPanel
+            round={model.round}
+            phase={model.phase}
+            miners={model.subnet.miners}
+            history={model.round.history}
+            scoredPercent={scoredPercent}
+            loading={firstLoad}
+          />
           <LeaderboardSection
             allRows={model.rows}
             filteredRows={filteredRows}
             query={query}
             burnPercent={model.metrics.burnPercent}
-            phase={model.phase}
             theme={theme}
             meta={model.meta}
             onQueryChange={setQuery}

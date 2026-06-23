@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { ReactNode } from "react";
 
 import { LEADERBOARD_COLUMN_COUNT, LEADERBOARD_VIEW_UIDS_STORAGE_KEY, VALIDATOR_COLUMNS } from "../constants";
-import { formatBlockDuration, formatInteger, formatMetricNumber, formatNumber, formatPercent, formatRepoRevision, getHuggingFaceRevisionUrl, shortText } from "../format";
+import { formatInteger, formatMetricNumber, formatNumber, formatPercent, formatRepoRevision, getHuggingFaceRevisionUrl, shortText } from "../format";
 import { getMinerKey } from "../model";
 import type { DashboardModel, MinerRow, Theme, ValidatorHealth, ValidatorMetric } from "../types";
 import { CopyHotkeyButton } from "./copy-hotkey-button";
@@ -42,7 +42,6 @@ type LeaderboardSectionProps = {
   filteredRows: MinerRow[];
   query: string;
   burnPercent: number | null;
-  phase: DashboardModel["phase"];
   theme: Theme;
   meta: DashboardModel["meta"];
   onQueryChange: (value: string) => void;
@@ -315,7 +314,6 @@ export function LeaderboardSection({
   filteredRows,
   query,
   burnPercent,
-  phase,
   theme,
   meta,
   onQueryChange,
@@ -434,7 +432,6 @@ export function LeaderboardSection({
     <section className={`leaderboard-section${fullscreen ? " leaderboard-section-fullscreen" : ""}`}>
       <div className="leaderboard-header">
         <SectionTitle eyebrow="Leaderboard" />
-        <FullscreenPhaseBar phase={phase} />
         <div className="leaderboard-actions">
           <div className="leaderboard-search-stack">
             <div className="leaderboard-search-toolbar">
@@ -626,28 +623,6 @@ function SelectedUidTokens({ items, onRemove }: SelectedUidTokensProps) {
           </button>
         </span>
       ))}
-    </div>
-  );
-}
-
-function FullscreenPhaseBar({ phase }: { phase: DashboardModel["phase"] }) {
-  const progress = Math.max(0, Math.min(100, phase.progress));
-
-  return (
-    <div className="leaderboard-fullscreen-phase" aria-label={`Current phase ${phase.name}, ${formatNumber(progress, 1)} percent complete`}>
-      <div className="leaderboard-fullscreen-phase-title">
-        <span>Current Phase</span>
-        <strong>{phase.name}</strong>
-      </div>
-      <div className="leaderboard-fullscreen-phase-progress" title={`${formatNumber(progress, 1)}% complete, ${formatBlockDuration(phase.blocksRemaining)} remaining`}>
-        <div className="leaderboard-fullscreen-phase-meta">
-          <span>{formatNumber(progress, 1)}%</span>
-          <small>{formatBlockDuration(phase.blocksRemaining)} remaining</small>
-        </div>
-        <div className="leaderboard-fullscreen-progress-track">
-          <i style={{ width: `${progress}%` }} />
-        </div>
-      </div>
     </div>
   );
 }

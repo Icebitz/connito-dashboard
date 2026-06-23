@@ -23,7 +23,7 @@ export function DashboardHeader({
   theme,
   activeTab,
   loading,
-  title = "Connito Leaderboard",
+  title = "Connito Subnet",
   subtitle,
   onRefresh,
   onTabChange,
@@ -35,7 +35,7 @@ export function DashboardHeader({
         <img className="brand-logo" src="/logo.svg" alt="" width="48" height="48" />
         <div className="brand-copy">
           <div className="brand-title-row">
-            <h1>{title} <span>(SN{netuid})</span></h1>
+            <h1>{title} <span>{netuid}</span></h1>
             <nav className="dashboard-tabs dashboard-tabs-inline" aria-label="Dashboard views">
               <button
                 type="button"

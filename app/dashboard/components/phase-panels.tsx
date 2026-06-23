@@ -2,7 +2,8 @@ import { useMemo, useRef, useState } from "react";
 
 import { BLOCK_TIME_SECONDS } from "../constants";
 import { formatBlock, formatBlockDuration, formatInteger, formatNumber } from "../format";
-import type { DashboardModel } from "../types";
+import type { DashboardModel, HistoryPoint } from "../types";
+import { MiniLineChart } from "./mini-line-chart";
 import { SectionTitle } from "./section-title";
 
 type PhasePanelsProps = {
@@ -14,6 +15,9 @@ type PhasePanelsProps = {
 
 type RoundHealthPanelProps = {
   round: DashboardModel["round"];
+  phase: DashboardModel["phase"];
+  miners: number;
+  history: HistoryPoint[];
   scoredPercent: number;
   loading: boolean;
 };
@@ -326,7 +330,7 @@ function getRoundHealthBreakdown(round: DashboardModel["round"]) {
   };
 }
 
-export function RoundHealthPanel({ round, scoredPercent, loading }: RoundHealthPanelProps) {
+export function RoundHealthPanel({ round, phase, miners, history, scoredPercent, loading }: RoundHealthPanelProps) {
   const [hoveredSegmentKey, setHoveredSegmentKey] = useState<RoundHealthSegmentTone | null>(null);
   const interactiveRef = useRef<HTMLDivElement | null>(null);
   const breakdown = getRoundHealthBreakdown(round);
@@ -334,6 +338,9 @@ export function RoundHealthPanel({ round, scoredPercent, loading }: RoundHealthP
   const hoveredSegmentLeft = hoveredSegment === null
     ? 50
     : Math.min(95, Math.max(5, hoveredSegment.startPercent + (hoveredSegment.percent / 2)));
+  const nextCycleMinutes = phase.blocksRemaining === null ? null : (phase.blocksRemaining * BLOCK_TIME_SECONDS) / 60;
+  const commitSuccess = round.downloaded;
+  const commitSuccessPercent = commitSuccess !== null && miners > 0 ? Math.max(0, Math.min(100, (commitSuccess / miners) * 100)) : null;
   const handleInteractiveMouseLeave = () => {
     const activeElement = document.activeElement;
     if (interactiveRef.current && activeElement && interactiveRef.current.contains(activeElement)) {
@@ -346,48 +353,94 @@ export function RoundHealthPanel({ round, scoredPercent, loading }: RoundHealthP
   if (loading) {
     return (
       <article className="round-panel round-panel-skeleton" aria-busy="true" aria-label="Loading round health">
-        <div className="section-title section-title-skeleton" aria-hidden="true">
-          <span />
-          <h2 />
-        </div>
-        <div className="round-health-summary round-health-summary-skeleton" aria-hidden="true">
-          <div className="round-health-summary-item">
+        <SectionTitle eyebrow="Round Details" />
+        <div className="round-details-head round-details-head-skeleton" aria-hidden="true">
+          <div className="round-details-head-item">
             <span />
             <strong />
           </div>
-          <div className="round-health-summary-item round-health-summary-roster">
+          <div className="round-details-head-item">
+            <span />
+            <strong />
+          </div>
+          <div className="round-details-head-item">
             <span />
             <strong />
           </div>
         </div>
-        <div className="round-health-bar round-health-bar-skeleton" aria-hidden="true">
-          <i className="round-health-segment round-health-segment-scored" style={{ width: "44%" }} />
-          <i className="round-health-segment round-health-segment-failed" style={{ width: "12%" }} />
-          <i className="round-health-segment round-health-segment-pending" style={{ width: "44%" }} />
-        </div>
-        <div className="round-health-legend round-health-legend-skeleton" aria-hidden="true">
-          {["Scored", "Failed", "Pending"].map((label) => (
-            <div className="round-health-legend-item" key={label}>
-              <span className="round-health-legend-swatch" />
-              <span className="round-health-legend-label">{label}</span>
+        <div className="round-details-metrics round-details-metrics-skeleton" aria-hidden="true">
+          {["Roster", "Scored", "Pending", "Failed", "Commit Success"].map((label) => (
+            <div className="round-details-metric" key={label}>
+              <span />
+              <strong />
+              <small>{label}</small>
             </div>
           ))}
+        </div>
+        <div className="round-health-interactive" aria-hidden="true">
+          <div className="round-health-bar round-health-bar-skeleton">
+            <i className="round-health-segment round-health-segment-scored" style={{ width: "44%" }} />
+            <i className="round-health-segment round-health-segment-failed" style={{ width: "12%" }} />
+            <i className="round-health-segment round-health-segment-pending" style={{ width: "44%" }} />
+          </div>
+        </div>
+        <div className="round-details-trend round-details-trend-skeleton" aria-hidden="true">
+          <div className="chart-box chart-box-skeleton">
+            <div className="chart-summary">
+              <span />
+              <strong />
+            </div>
+            <div className="chart-skeleton">
+              <i />
+            </div>
+          </div>
         </div>
       </article>
     );
   }
 
   return (
-    <article className="round-panel">
-      <SectionTitle eyebrow="Round Health" title={`${formatNumber(scoredPercent, 1)}% scored`} />
-      <div className="round-health-summary">
-        <div className="round-health-summary-item round-health-summary-loss">
-          <span>Loss</span>
+    <article className="round-panel round-details-panel">
+      <SectionTitle eyebrow="Round Details" />
+      <div className="round-details-head">
+        <div className="round-details-head-item">
+          <span>Round</span>
+          <strong>{formatBlock(round.id)}</strong>
+        </div>
+        <div className="round-details-head-item">
+          <span>Baseline Loss</span>
           <strong>{formatNumber(round.baselineLoss, 4)}</strong>
         </div>
-        <div className="round-health-summary-item round-health-summary-roster">
-          <span>Roster</span>
-          <strong>{formatInteger(breakdown.roster)}</strong>
+        <div className="round-details-head-item">
+          <span>Next Cycle In</span>
+          <strong>{nextCycleMinutes === null ? "-" : `${formatNumber(nextCycleMinutes, 1)} min`}</strong>
+        </div>
+      </div>
+      <div className="round-details-metrics">
+        <div className="round-details-metric round-details-metric-wide">
+          <span>{formatInteger(breakdown.roster)}</span>
+          <strong>Roster</strong>
+          <small>scored + pending + failed</small>
+        </div>
+        <div className="round-details-metric">
+          <span>{formatInteger(breakdown.scored)}</span>
+          <strong>Scored</strong>
+          <small>{formatNumber(breakdown.roster > 0 ? (breakdown.scored / breakdown.roster) * 100 : 0, 2)}%</small>
+        </div>
+        <div className="round-details-metric">
+          <span>{formatInteger(breakdown.pending)}</span>
+          <strong>Pending</strong>
+          <small>{formatNumber(breakdown.roster > 0 ? (breakdown.pending / breakdown.roster) * 100 : 0, 2)}%</small>
+        </div>
+        <div className="round-details-metric">
+          <span>{formatInteger(breakdown.failed)}</span>
+          <strong>Failed</strong>
+          <small>{formatNumber(breakdown.roster > 0 ? (breakdown.failed / breakdown.roster) * 100 : 0, 2)}%</small>
+        </div>
+        <div className="round-details-metric">
+          <span>{commitSuccess === null ? "-" : `${formatInteger(commitSuccess)} / ${formatInteger(miners)}`}</span>
+          <strong>Commit Success</strong>
+          <small>{commitSuccessPercent === null ? "-" : `${formatNumber(commitSuccessPercent, 2)}%`}</small>
         </div>
       </div>
       <div ref={interactiveRef} className="round-health-interactive" onMouseLeave={handleInteractiveMouseLeave}>
@@ -426,14 +479,24 @@ export function RoundHealthPanel({ round, scoredPercent, loading }: RoundHealthP
             />
           ))}
         </div>
+        <div className="round-details-progress-note">
+          {formatNumber(scoredPercent, 2)}% scored · {formatInteger(breakdown.pending)} pending
+        </div>
+        <div className="round-health-legend" aria-label="Round roster legend">
+          {breakdown.segments.map((segment) => (
+            <div className={`round-health-legend-item round-health-legend-${segment.tone}`} key={segment.key}>
+              <span className="round-health-legend-swatch" aria-hidden="true" />
+              <span className="round-health-legend-label">{segment.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="round-health-legend" aria-label="Round roster legend">
-        {breakdown.segments.map((segment) => (
-          <div className={`round-health-legend-item round-health-legend-${segment.tone}`} key={segment.key}>
-            <span className="round-health-legend-swatch" aria-hidden="true" />
-            <span className="round-health-legend-label">{segment.label}</span>
-          </div>
-        ))}
+      <div className="round-details-trend">
+        <div className="round-details-trend-head">
+          <span>Baseline Loss Trend</span>
+          <small>{history.length ? `${history.length} samples` : "-"}</small>
+        </div>
+        <MiniLineChart points={history} />
       </div>
     </article>
   );

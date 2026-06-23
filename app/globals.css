@@ -3,6 +3,7 @@
   --body-start: #0f1a2c;
   --body-end: #050911;
   --panel: rgba(13, 20, 33, 0.34);
+  --panel-opaque: #111a29;
   --panel-raised: rgba(18, 27, 42, 0.44);
   --panel-soft: rgba(10, 16, 27, 0.22);
   --line: rgba(177, 214, 255, 0.16);
@@ -75,6 +76,7 @@
   --body-start: #edf2f8;
   --body-end: #c6d3e1;
   --panel: rgba(248, 250, 254, 0.22);
+  --panel-opaque: #f7fafc;
   --panel-raised: rgba(242, 246, 251, 0.34);
   --panel-soft: rgba(241, 245, 250, 0.12);
   --line: rgba(92, 115, 146, 0.18);
@@ -1195,29 +1197,26 @@ h1 {
 
 .phase-window {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr) minmax(0, 0.92fr) minmax(0, 0.84fr);
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin: 4px 0 18px;
   overflow: visible;
 }
 
 .phase-window-card {
-  --phase-card-scale: 0.94;
   min-width: 0;
-  min-height: 92px;
+  min-height: 118px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid rgba(177, 214, 255, 0.16);
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--panel-soft);
   color: var(--muted);
-  transform: scale(var(--phase-card-scale));
-  transform-origin: center;
-  transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, opacity 0.22s ease;
+  transition: border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease;
   backdrop-filter: blur(14px) saturate(150%);
   -webkit-backdrop-filter: blur(14px) saturate(150%);
 }
@@ -1244,11 +1243,11 @@ h1 {
 
 .phase-window-progress {
   position: relative;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .phase-window-progress .progress-track {
-  margin: 10px 0 14px;
+  margin: 8px 0 10px;
 }
 
 .phase-window-card > strong {
@@ -1256,39 +1255,27 @@ h1 {
   line-height: 1.12;
 }
 
-.phase-window-prev-1 {
-  --phase-card-scale: 1.02;
-  opacity: 0.92;
-  box-shadow: 0 8px 22px rgba(3, 9, 18, 0.12);
-  transform: scale(var(--phase-card-scale));
-}
-
 .phase-window-next-1 {
-  --phase-card-scale: 1.2;
   opacity: 0.92;
-  box-shadow: 0 8px 22px rgba(3, 9, 18, 0.12);
-  transform: translateX(32px) scale(var(--phase-card-scale));
 }
 
 .phase-window-next-2 {
-  --phase-card-scale: 0.95;
-  opacity: 0.82;
-  box-shadow: 0 8px 22px rgba(3, 9, 18, 0.12);
-  transform: translateX(40px) scale(var(--phase-card-scale));
+  opacity: 0.84;
 }
 
 .phase-window-next-3 {
-  --phase-card-scale: 0.8;
-  opacity: 0.72;
+  opacity: 0.76;
 }
 
 .phase-window-current {
-  --phase-card-scale: 1.08;
-  min-height: 140px;
+  min-height: 130px;
   justify-content: flex-start;
-  border-color: rgba(70, 215, 210, 0.34);
+  border-color: rgba(70, 215, 210, 0.48);
   background: linear-gradient(180deg, rgba(70, 215, 210, 0.12), rgba(90, 168, 255, 0.06)), rgba(255, 255, 255, 0.06);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  box-shadow:
+    0 0 0 1px rgba(70, 215, 210, 0.12),
+    0 0 24px rgba(70, 215, 210, 0.18),
+    0 14px 34px rgba(0, 0, 0, 0.22);
   opacity: 1;
   z-index: 1;
 }
@@ -1325,7 +1312,7 @@ h1 {
 }
 
 .phase-panel-skeleton .phase-window-current.phase-window-skeleton-card {
-  min-height: 140px;
+  min-height: 130px;
   justify-content: flex-start;
   border-color: var(--line);
   background: var(--panel-soft);
@@ -1356,7 +1343,7 @@ h1 {
   justify-content: space-between;
   gap: 8px;
   min-width: 0;
-  margin-top: auto;
+  margin-top: 0;
 }
 
 .phase-panel-skeleton .phase-window-skeleton-meta em {
@@ -1610,6 +1597,252 @@ h1 {
   --item-fill: #7c5ce5;
   --item-border: rgba(167, 139, 250, 0.34);
   --item-tint: rgba(167, 139, 250, 0.1);
+}
+
+.round-health-summary {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.round-health-summary-item {
+  min-width: 0;
+}
+
+.round-health-summary-item span,
+.round-health-legend-label {
+  display: block;
+  color: var(--muted);
+  font-size: var(--font-2xs);
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.round-health-summary-item strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--heading);
+  font-size: var(--font-3xl);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.round-health-summary-roster strong {
+  color: var(--text);
+}
+
+.round-health-interactive {
+  position: relative;
+  margin-top: 14px;
+}
+
+.round-health-bar {
+  display: flex;
+  align-items: stretch;
+  height: 26px;
+  min-height: 26px;
+  overflow: hidden;
+  border: 1px solid var(--metric-track-border);
+  border-radius: 999px;
+  background: var(--progress-bg);
+}
+
+.round-health-segment {
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background-clip: padding-box;
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: help;
+  transition: width 0.72s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.round-health-segment:not(:last-child) {
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.14);
+}
+
+.round-health-segment:focus-visible {
+  z-index: 1;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+}
+
+.round-health-segment:hover {
+  filter: brightness(1.06);
+}
+
+.round-health-segment-scored {
+  --segment-fill: #16835a;
+}
+
+.round-health-segment-failed {
+  --segment-fill: #c8354f;
+}
+
+.round-health-segment-pending {
+  --segment-fill: #2f7bd7;
+}
+
+.round-health-segment {
+  height: 100%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)), var(--segment-fill);
+}
+
+.round-health-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  z-index: 3;
+  min-width: 164px;
+  max-width: min(260px, calc(100vw - 48px));
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--segment-fill);
+  border-radius: 12px;
+  background: var(--panel-opaque);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.round-health-tooltip strong {
+  display: block;
+  color: var(--heading);
+  font-size: var(--font-xs);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.round-health-tooltip span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: var(--font-2xs);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.round-health-tooltip-scored {
+  --segment-fill: #16835a;
+}
+
+.round-health-tooltip-failed {
+  --segment-fill: #c8354f;
+}
+
+.round-health-tooltip-pending {
+  --segment-fill: #2f7bd7;
+}
+
+.round-health-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 12px;
+}
+
+.round-health-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.round-health-legend-swatch {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--segment-fill);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.round-health-legend-copy {
+  min-width: 0;
+}
+
+.round-health-legend-copy strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--heading);
+  font-size: var(--font-sm);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.round-health-legend-label {
+  color: var(--muted);
+}
+
+.round-health-legend-scored {
+  --segment-fill: #16835a;
+}
+
+.round-health-legend-failed {
+  --segment-fill: #c8354f;
+}
+
+.round-health-legend-pending {
+  --segment-fill: #2f7bd7;
+}
+
+.round-health-bar-skeleton,
+.round-health-legend-skeleton .round-health-legend-swatch,
+.round-health-summary-skeleton .round-health-summary-item span,
+.round-health-summary-skeleton .round-health-summary-item strong,
+.round-health-legend-skeleton .round-health-legend-label {
+  display: block;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+  background-size: 220% 100%;
+  color: transparent;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.round-health-summary-skeleton .round-health-summary-item span {
+  width: 42px;
+  height: 11px;
+}
+
+.round-health-summary-skeleton .round-health-summary-item strong {
+  width: min(140px, 76%);
+  height: 32px;
+}
+
+.round-health-bar-skeleton {
+  gap: 0;
+}
+
+.round-health-bar-skeleton .round-health-segment {
+  display: block;
+  padding: 0;
+  border-radius: 0;
+  border: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+  background-size: 220% 100%;
+  color: transparent;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+  box-shadow: none;
+}
+
+.round-health-legend-skeleton .round-health-legend-swatch {
+  width: 10px;
+  height: 10px;
+}
+
+.round-health-legend-skeleton .round-health-legend-label {
+  width: 42px;
+  height: 11px;
 }
 
 .upcoming-phase-section {
@@ -2735,7 +2968,7 @@ table {
 .page-size-field select {
   height: 34px;
   min-width: 74px;
-  padding: 0 8px;
+  padding: 0 14px 0 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   outline: 0;
@@ -4152,16 +4385,20 @@ tbody tr:last-child td {
   }
 
   .phase-window {
-    gap: 7px;
+    gap: 6px;
   }
 
   .phase-window-card {
-    min-height: 84px;
-    padding: 10px;
+    min-height: 108px;
+    padding: 9px;
   }
 
   .phase-window-current {
-    min-height: 122px;
+    min-height: 114px;
+  }
+
+  .phase-panel-skeleton .phase-window-current.phase-window-skeleton-card {
+    min-height: 114px;
   }
 
   .round-stats {
@@ -4259,13 +4496,18 @@ tbody tr:last-child td {
     grid-template-columns: 1fr;
   }
 
+  .round-health-summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .phase-stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
 
   .phase-window {
-    grid-template-columns: repeat(5, minmax(116px, 1fr));
+    grid-template-columns: repeat(4, minmax(116px, 1fr));
     overflow-x: auto;
     overflow-y: visible;
     padding: 4px 2px 6px;
@@ -4274,8 +4516,8 @@ tbody tr:last-child td {
   }
 
   .phase-window-card {
-    min-height: 78px;
-    padding: 9px;
+    min-height: 100px;
+    padding: 8px;
   }
 
   .phase-window-card > strong {
@@ -4283,7 +4525,11 @@ tbody tr:last-child td {
   }
 
   .phase-window-current {
-    min-height: 116px;
+    min-height: 108px;
+  }
+
+  .phase-panel-skeleton .phase-window-current.phase-window-skeleton-card {
+    min-height: 108px;
   }
 
   .phase-window-current > strong {

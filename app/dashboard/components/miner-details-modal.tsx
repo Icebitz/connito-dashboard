@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 
 import { VALIDATOR_COLUMNS } from "../constants";
-import { formatInteger, formatMetricNumber, shortText } from "../format";
+import { formatAgeSecondsShort, formatInteger, formatMetricNumber, shortText } from "../format";
 import type { MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
 import { CopyHotkeyButton } from "./copy-hotkey-button";
 
@@ -93,7 +93,7 @@ export function MinerDetailsModal({ row, validatorHealth, onClose, onOpenHistory
 
           <div className="miner-details-meta-row">
             <span className="miner-details-group-pill">Group {row.cohortGroup ?? "-"}</span>
-            <span>Age: {formatAgeSeconds(row.scoreLatestAgeSeconds)}</span>
+            <span>Age: {formatAgeSecondsShort(row.scoreLatestAgeSeconds)}</span>
           </div>
 
           <section className="miner-details-block">
@@ -133,7 +133,7 @@ export function MinerDetailsModal({ row, validatorHealth, onClose, onOpenHistory
                       <td>{formatMetricNumber(metric?.scoreLatest, 4)}</td>
                       <td>{formatMetricNumber(metric?.scoreAverage, 4)}</td>
                       <td>{formatValidatorRank(metric)}</td>
-                      <td>{formatAgeSeconds(metric?.scoreLatestAgeSeconds)}</td>
+                      <td>{formatAgeSecondsShort(metric?.scoreLatestAgeSeconds)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -355,17 +355,4 @@ function formatValidatorRank(metric: ValidatorMetric | undefined) {
   }
 
   return metric.rankTotal === null ? formatInteger(metric.rank) : `${formatInteger(metric.rank)} / ${formatInteger(metric.rankTotal)}`;
-}
-
-function formatAgeSeconds(value: number | null | undefined) {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
-    return "-";
-  }
-
-  const totalSeconds = Math.max(0, Math.round(value));
-  const hours = Math.floor(totalSeconds / 3_600);
-  const minutes = Math.floor((totalSeconds % 3_600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
 }

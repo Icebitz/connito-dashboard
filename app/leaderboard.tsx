@@ -10,7 +10,7 @@ import { OverviewGrid } from "./dashboard/components/overview-grid";
 import { PhasePanels, RoundHealthPanel } from "./dashboard/components/phase-panels";
 import { RoundTrendSection } from "./dashboard/components/round-trend-section";
 import { REFRESH_MS, SYNC_COUNTER_MS, THEME_STORAGE_KEY } from "./dashboard/constants";
-import { formatDuration } from "./dashboard/format";
+import { formatAgeSecondsShort } from "./dashboard/format";
 import { buildDashboardModel } from "./dashboard/model";
 import type { ApiResponse, DashboardStatus, Theme } from "./dashboard/types";
 
@@ -111,7 +111,7 @@ export default function Leaderboard() {
   const fetchedAtMs = model.fetchedAt ? new Date(model.fetchedAt).getTime() : Number.NaN;
   const hasSyncedAt = Number.isFinite(fetchedAtMs);
   const lastSync = hasSyncedAt ? new Date(fetchedAtMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
-  const syncCounter = hasSyncedAt ? formatDuration(Math.max(0, nowMs - fetchedAtMs)) : "-";
+  const syncCounter = hasSyncedAt ? formatAgeSecondsShort(Math.max(0, (nowMs - fetchedAtMs) / 1000)) : "-";
   const firstLoad = loading && leaderboard === null;
 
   return (

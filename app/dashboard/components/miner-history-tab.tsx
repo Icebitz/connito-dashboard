@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VALIDATOR_COLUMNS } from "../constants";
-import { formatDuration, formatInteger, formatMetricNumber, formatNumber, shortText } from "../format";
+import { formatAgeSecondsShort, formatDuration, formatInteger, formatMetricNumber, formatNumber, shortText } from "../format";
 import { Notice } from "./notice";
 import { SectionTitle } from "./section-title";
 import { CopyHotkeyButton } from "./copy-hotkey-button";
@@ -112,7 +112,8 @@ export function MinerHistoryTab({ selectedMinerUids }: MinerHistoryTabProps) {
   );
   const latestFetchedAt = getLatestFetchedAt(historyModels);
   const fetchedAtMs = latestFetchedAt ? new Date(latestFetchedAt).getTime() : Number.NaN;
-  const syncCounter = Number.isFinite(fetchedAtMs) ? formatAgeSeconds(nowMs - fetchedAtMs) : "-";
+  const syncCounter = Number.isFinite(fetchedAtMs) ? formatAgeSecondsShort((nowMs - fetchedAtMs) / 1000) : "-";
+  const lastSync = Number.isFinite(fetchedAtMs) ? new Date(fetchedAtMs).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "-";
   const pageUids = activeMinerUids.length ? activeMinerUids : historyModels.map((historyModel) => historyModel.minerUid);
   const historyPageCount = pageUids.length;
   const boundedHistoryPageIndex = historyPageCount ? Math.min(historyPageIndex, historyPageCount - 1) : 0;
@@ -145,7 +146,7 @@ export function MinerHistoryTab({ selectedMinerUids }: MinerHistoryTabProps) {
           </label>
           <button type="submit" className="miner-history-search-button">History</button>
         </form>
-        <span>Synced {syncCounter} ago</span>
+        <span title={lastSync === "-" ? undefined : `Last sync ${lastSync}`}>Synced {syncCounter} ago</span>
       </div>
 
       <Notice message={error} />
@@ -209,19 +210,6 @@ function HistoryMeta({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </span>
   );
-}
-
-function formatAgeSeconds(value: number | null | undefined) {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
-    return "-";
-  }
-
-  const totalSeconds = Math.max(0, Math.round(value));
-  const hours = Math.floor(totalSeconds / 3_600);
-  const minutes = Math.floor((totalSeconds % 3_600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
 }
 
 function MinerHistoryPager({ uids, activeIndex, onSelect }: { uids: string[]; activeIndex: number; onSelect: (index: number) => void }) {

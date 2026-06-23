@@ -1,4 +1,4 @@
-import { LEADERBOARD_SOURCE } from "./constants";
+import { LEADERBOARD_SOURCE, ROUND_TREND_SAMPLE_COUNT } from "./constants";
 import type { ApiResponse, DashboardModel, HistoryPoint, MinerRow, MinerScoreHistoryRound, UpcomingPhase, ValidatorHealth, ValidatorMetric } from "./types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -332,7 +332,7 @@ function getRoundHistory(round: Record<string, unknown> | null): HistoryPoint[] 
 
       return a.round - b.round;
     })
-    .slice(-48);
+    .slice(-ROUND_TREND_SAMPLE_COUNT);
 }
 
 function getHistoryValidatorKey(metric: Pick<ValidatorMetric, "slot" | "uid" | "label">) {
@@ -491,6 +491,10 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
   const assigned = rows.filter((row) => row.assigned === true).length;
   const metaStale = asBoolean(meta?.stale) ?? false;
   const validatorHealth = getValidatorHealth(meta);
+  const roundScored = asNumber(roundStats?.scored);
+  const roundPending = asNumber(roundStats?.pending);
+  const roundFailed = asNumber(roundStats?.failed);
+  const roundRoster = (roundScored ?? 0) + (roundPending ?? 0) + (roundFailed ?? 0);
 
   return {
     source: typeof leaderboard?.source === "string" ? leaderboard.source : LEADERBOARD_SOURCE,
@@ -518,10 +522,10 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
     round: {
       id: asNumber(round?.id),
       baselineLoss: asNumber(round?.baseline_loss),
-      roster: asNumber(roundStats?.roster),
-      scored: asNumber(roundStats?.scored),
-      pending: asNumber(roundStats?.pending),
-      failed: asNumber(roundStats?.failed),
+      roster: roundRoster,
+      scored: roundScored,
+      pending: roundPending,
+      failed: roundFailed,
       downloaded: asNumber(roundStats?.downloaded),
       claimed: asNumber(roundStats?.claimed),
       history

@@ -1,6 +1,7 @@
 export const REFRESH_MS = 12_000;
 export const SYNC_COUNTER_MS = 1_000;
 export const BLOCK_TIME_SECONDS = 12;
+export const ROUND_TREND_SAMPLE_COUNT = 50;
 export const LEADERBOARD_SOURCE = "https://dashboard-api.connito.ai/api/v2/leaderboard";
 export const THEME_STORAGE_KEY = "connito-dashboard-theme";
 export const LEADERBOARD_VIEW_UIDS_STORAGE_KEY = "connito-dashboard-leaderboard-view-uids";

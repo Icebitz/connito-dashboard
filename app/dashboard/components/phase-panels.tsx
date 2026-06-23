@@ -1,5 +1,4 @@
-import { Activity, CheckCircle2, Database, Gauge, Users, X } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { BLOCK_TIME_SECONDS } from "../constants";
 import { formatBlock, formatBlockDuration, formatInteger, formatNumber } from "../format";
@@ -22,7 +21,7 @@ type RoundHealthPanelProps = {
 type PhaseWindowItem = {
   key: string;
   name: string;
-  position: -1 | 0 | 1 | 2 | 3;
+  position: 0 | 1 | 2 | 3;
   label: string;
   startBlock: number | null;
   endBlock: number | null;
@@ -48,6 +47,9 @@ export function PhasePanels({ phase, fetchedAt, nowMs, loading }: PhasePanelsPro
           <SectionTitle eyebrow="Phase Cycle" />
           <div className="phase-window" aria-label="Phase cycle">
             {phaseWindow.map((item) => {
+              const progress = getPhaseCardProgress(item, elapsedBlocks);
+              const progressTitle = getPhaseCardProgressTitle(item, elapsedBlocks);
+
               return (
                 <article
                   className={`phase-window-card phase-window-${getPhasePositionClass(item.position)}`}
@@ -56,16 +58,11 @@ export function PhasePanels({ phase, fetchedAt, nowMs, loading }: PhasePanelsPro
                 >
                   <span>{item.label}</span>
                   <strong>{item.name}</strong>
-                  {item.position === 0 ? (
-                    <div className="phase-window-progress">
-                      <div
-                        className="progress-track phase-window-progress-track"
-                        title={`${formatNumber(getCurrentProgress(item, elapsedBlocks), 1)}% complete, ${formatBlockDuration(getLiveBlocks(item.blocksRemaining, elapsedBlocks))} remaining`}
-                      >
-                        <i style={{ width: `${getCurrentProgress(item, elapsedBlocks)}%` }} />
-                      </div>
+                  <div className="phase-window-progress">
+                    <div className="progress-track phase-window-progress-track" title={progressTitle}>
+                      <i style={{ width: `${progress}%` }} />
                     </div>
-                  ) : null}
+                  </div>
                   <div className="phase-window-meta">
                     {item.position === 0 ? (
                       <>
@@ -84,16 +81,11 @@ export function PhasePanels({ phase, fetchedAt, nowMs, loading }: PhasePanelsPro
                       </>
                     )}
                   </div>
-                  {item.position === 0 ? (
-                    <div
-                      className="phase-window-blocks phase-window-blocks-inline"
-                      aria-label={`Current phase blocks ${formatBlock(item.startBlock)} - ${formatBlock(item.endBlock)}`}
-                    >
-                      <span className="phase-window-block-value">{formatBlock(item.startBlock)}</span>
-                      <span className="phase-window-block-separator">-</span>
-                      <span className="phase-window-block-value">{formatBlock(item.endBlock)}</span>
-                    </div>
-                  ) : null}
+                  <div className="phase-window-blocks phase-window-blocks-inline" aria-label={getPhaseBlockRangeLabel(item)}>
+                    <span className="phase-window-block-value">{formatBlock(item.startBlock)}</span>
+                    <span className="phase-window-block-separator">-</span>
+                    <span className="phase-window-block-value">{formatBlock(item.endBlock)}</span>
+                  </div>
                 </article>
               );
             })}
@@ -140,13 +132,38 @@ function getCurrentProgress(item: PhaseWindowItem, elapsedBlocks: number) {
   return Math.max(0, Math.min(100, ((blocksInto + elapsedBlocks) / totalBlocks) * 100));
 }
 
+function getPhaseCardProgress(item: PhaseWindowItem, elapsedBlocks: number) {
+  if (item.position === 0) {
+    return getCurrentProgress(item, elapsedBlocks);
+  }
+
+  return 0;
+}
+
+function getPhaseCardProgressTitle(item: PhaseWindowItem, elapsedBlocks: number) {
+  if (item.position === 0) {
+    return `${formatNumber(getCurrentProgress(item, elapsedBlocks), 1)}% complete, ${formatBlockDuration(getLiveBlocks(item.blocksRemaining, elapsedBlocks))} remaining`;
+  }
+
+  const blocksUntilStart = getLiveBlocks(item.blocksUntilStart, elapsedBlocks);
+  return blocksUntilStart === null ? "Starts soon" : `${formatBlockDuration(blocksUntilStart)} until start`;
+}
+
+function getPhaseBlockRangeLabel(item: PhaseWindowItem) {
+  if (item.position === 0) {
+    return `Current phase blocks ${formatBlock(item.startBlock)} - ${formatBlock(item.endBlock)}`;
+  }
+
+  return `${item.label} phase blocks ${formatBlock(item.startBlock)} - ${formatBlock(item.endBlock)}`;
+}
+
 function getPhaseWindow(phase: DashboardModel["phase"]): PhaseWindowItem[] {
   const currentPhaseIndex = getPhaseIndex(phase.name);
   const currentDuration = phase.phaseStart !== null && phase.phaseEnd !== null && phase.phaseEnd >= phase.phaseStart
     ? phase.phaseEnd - phase.phaseStart + 1
     : null;
 
-  return ([-1, 0, 1, 2, 3] as const).map((position) => {
+  return ([0, 1, 2, 3] as const).map((position) => {
     if (position === 0) {
       return {
         key: `current-${phase.name}-${phase.phaseStart ?? "start"}`,
@@ -163,35 +180,18 @@ function getPhaseWindow(phase: DashboardModel["phase"]): PhaseWindowItem[] {
       };
     }
 
-    if (position > 0) {
-      const upcoming = phase.upcoming[position - 1] ?? null;
-      const fallbackName = getPhaseNameAt(currentPhaseIndex, position);
-      return {
-        key: `next-${position}-${upcoming?.name ?? fallbackName}-${upcoming?.startBlock ?? "unknown"}`,
-        name: upcoming?.name ?? fallbackName,
-        position,
-        label: position === 1 ? "Next" : `Next +${position - 1}`,
-        startBlock: upcoming?.startBlock ?? null,
-        endBlock: upcoming?.endBlock ?? null,
-        headBlock: null,
-        duration: upcoming?.duration ?? null,
-        blocksUntilStart: upcoming?.blocksUntilStart ?? null,
-        blocksRemaining: null,
-        progress: null
-      };
-    }
-
-    const previousName = getPhaseNameAt(currentPhaseIndex, -1);
+    const upcoming = phase.upcoming[position - 1] ?? null;
+    const fallbackName = getPhaseNameAt(currentPhaseIndex, position);
     return {
-      key: `prev-${position}-${previousName}`,
-      name: previousName,
+      key: `next-${position}-${upcoming?.name ?? fallbackName}-${upcoming?.startBlock ?? "unknown"}`,
+      name: upcoming?.name ?? fallbackName,
       position,
-      label: "Prev",
-      startBlock: null,
-      endBlock: null,
+      label: position === 1 ? "Next" : `Next +${position - 1}`,
+      startBlock: upcoming?.startBlock ?? null,
+      endBlock: upcoming?.endBlock ?? null,
       headBlock: null,
-      duration: null,
-      blocksUntilStart: null,
+      duration: upcoming?.duration ?? null,
+      blocksUntilStart: upcoming?.blocksUntilStart ?? null,
       blocksRemaining: null,
       progress: null
     };
@@ -222,12 +222,11 @@ function getPhasePositionClass(position: PhaseWindowItem["position"]) {
     return "current";
   }
 
-  return position < 0 ? `prev-${Math.abs(position)}` : `next-${position}`;
+  return `next-${position}`;
 }
 
 function PhasePanelSkeleton() {
   const skeletonCards = [
-    { key: "prev", className: "prev-1", label: "Prev", name: "Loading" },
     { key: "current", className: "current", label: "Current", name: "Loading" },
     { key: "next-1", className: "next-1", label: "Next", name: "Loading" },
     { key: "next-2", className: "next-2", label: "Next +1", name: "Loading" },
@@ -248,29 +247,20 @@ function PhasePanelSkeleton() {
           >
             <span>{item.label}</span>
             <strong>{item.name}</strong>
-            {item.key === "current" ? (
-              <>
-                <div className="phase-window-skeleton-progress">
-                  <div className="progress-track progress-track-skeleton">
-                    <i />
-                  </div>
-                </div>
-                <div className="phase-window-meta phase-window-skeleton-meta">
-                  <em />
-                  <small />
-                </div>
-                <div className="phase-window-blocks phase-window-blocks-inline phase-window-skeleton-blocks">
-                  <span className="phase-window-block-value" />
-                  <span className="phase-window-block-separator">-</span>
-                  <span className="phase-window-block-value" />
-                </div>
-              </>
-            ) : (
-              <div className="phase-window-meta phase-window-skeleton-meta">
-                <em />
-                <small />
+            <div className="phase-window-skeleton-progress">
+              <div className="progress-track progress-track-skeleton">
+                <i />
               </div>
-            )}
+            </div>
+            <div className="phase-window-meta phase-window-skeleton-meta">
+              <em />
+              <small />
+            </div>
+            <div className="phase-window-blocks phase-window-blocks-inline phase-window-skeleton-blocks">
+              <span className="phase-window-block-value" />
+              <span className="phase-window-block-separator">-</span>
+              <span className="phase-window-block-value" />
+            </div>
           </article>
         ))}
       </div>
@@ -287,15 +277,71 @@ function PhaseWindowBlock({ label, blocks }: { label: string; blocks: number | n
   );
 }
 
+type RoundHealthSegmentTone = "scored" | "failed" | "pending";
+
+type RoundHealthSegment = {
+  key: RoundHealthSegmentTone;
+  label: string;
+  value: number;
+  tone: RoundHealthSegmentTone;
+  percent: number;
+  startPercent: number;
+};
+
+function getRoundCount(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function getRoundHealthBreakdown(round: DashboardModel["round"]) {
+  const scored = getRoundCount(round.scored);
+  const failed = getRoundCount(round.failed);
+  const pending = getRoundCount(round.pending);
+  const roster = scored + failed + pending;
+
+  const segments = [
+    { key: "scored", label: "Scored", value: scored, tone: "scored", percent: 0 },
+    { key: "failed", label: "Failed", value: failed, tone: "failed", percent: 0 },
+    { key: "pending", label: "Pending", value: pending, tone: "pending", percent: 0 }
+  ] as const;
+
+  let startPercent = 0;
+  const normalizedSegments: RoundHealthSegment[] = segments.map((segment) => {
+    const percent = roster > 0 ? (segment.value / roster) * 100 : 0;
+    const output: RoundHealthSegment = {
+      ...segment,
+      percent,
+      startPercent
+    };
+
+    startPercent += percent;
+    return output;
+  });
+
+  return {
+    roster,
+    scored,
+    failed,
+    pending,
+    segments: normalizedSegments
+  };
+}
+
 export function RoundHealthPanel({ round, scoredPercent, loading }: RoundHealthPanelProps) {
-  const stats = [
-    { tone: "loss", label: "Loss", value: formatNumber(round.baselineLoss, 4), icon: <Gauge size={16} /> },
-    { tone: "scored", label: "Scored", value: formatInteger(round.scored), icon: <CheckCircle2 size={16} /> },
-    { tone: "pending", label: "Pending", value: formatInteger(round.pending), icon: <Activity size={16} /> },
-    { tone: "failed", label: "Failed", value: formatInteger(round.failed), icon: <X size={16} /> },
-    { tone: "roster", label: "Roster", value: formatInteger(round.roster), icon: <Users size={16} /> },
-    { tone: "claimed", label: "Claimed", value: formatInteger(round.claimed), icon: <Database size={16} /> }
-  ];
+  const [hoveredSegmentKey, setHoveredSegmentKey] = useState<RoundHealthSegmentTone | null>(null);
+  const interactiveRef = useRef<HTMLDivElement | null>(null);
+  const breakdown = getRoundHealthBreakdown(round);
+  const hoveredSegment = hoveredSegmentKey ? breakdown.segments.find((segment) => segment.key === hoveredSegmentKey) ?? null : null;
+  const hoveredSegmentLeft = hoveredSegment === null
+    ? 50
+    : Math.min(95, Math.max(5, hoveredSegment.startPercent + (hoveredSegment.percent / 2)));
+  const handleInteractiveMouseLeave = () => {
+    const activeElement = document.activeElement;
+    if (interactiveRef.current && activeElement && interactiveRef.current.contains(activeElement)) {
+      return;
+    }
+
+    setHoveredSegmentKey(null);
+  };
 
   if (loading) {
     return (
@@ -304,12 +350,26 @@ export function RoundHealthPanel({ round, scoredPercent, loading }: RoundHealthP
           <span />
           <h2 />
         </div>
-        <div className="round-stats">
-          {stats.map((stat) => (
-            <div className={`round-stat round-stat-${stat.tone} round-stat-skeleton`} key={stat.label} aria-hidden="true">
-              <span className="stat-icon" />
-              <span className="stat-label" />
-              <strong />
+        <div className="round-health-summary round-health-summary-skeleton" aria-hidden="true">
+          <div className="round-health-summary-item">
+            <span />
+            <strong />
+          </div>
+          <div className="round-health-summary-item round-health-summary-roster">
+            <span />
+            <strong />
+          </div>
+        </div>
+        <div className="round-health-bar round-health-bar-skeleton" aria-hidden="true">
+          <i className="round-health-segment round-health-segment-scored" style={{ width: "44%" }} />
+          <i className="round-health-segment round-health-segment-failed" style={{ width: "12%" }} />
+          <i className="round-health-segment round-health-segment-pending" style={{ width: "44%" }} />
+        </div>
+        <div className="round-health-legend round-health-legend-skeleton" aria-hidden="true">
+          {["Scored", "Failed", "Pending"].map((label) => (
+            <div className="round-health-legend-item" key={label}>
+              <span className="round-health-legend-swatch" />
+              <span className="round-health-legend-label">{label}</span>
             </div>
           ))}
         </div>
@@ -320,12 +380,58 @@ export function RoundHealthPanel({ round, scoredPercent, loading }: RoundHealthP
   return (
     <article className="round-panel">
       <SectionTitle eyebrow="Round Health" title={`${formatNumber(scoredPercent, 1)}% scored`} />
-      <div className="round-stats">
-        {stats.map((stat) => (
-          <div className={`round-stat round-stat-${stat.tone}`} key={stat.label}>
-            <span className="stat-icon" aria-hidden="true">{stat.icon}</span>
-            <span className="stat-label">{stat.label}</span>
-            <strong>{stat.value}</strong>
+      <div className="round-health-summary">
+        <div className="round-health-summary-item round-health-summary-loss">
+          <span>Loss</span>
+          <strong>{formatNumber(round.baselineLoss, 4)}</strong>
+        </div>
+        <div className="round-health-summary-item round-health-summary-roster">
+          <span>Roster</span>
+          <strong>{formatInteger(breakdown.roster)}</strong>
+        </div>
+      </div>
+      <div ref={interactiveRef} className="round-health-interactive" onMouseLeave={handleInteractiveMouseLeave}>
+        {hoveredSegment ? (
+          <div
+            className={`round-health-tooltip round-health-tooltip-${hoveredSegment.tone}`}
+            role="tooltip"
+            style={{ left: `${hoveredSegmentLeft}%` }}
+          >
+            <strong>{hoveredSegment.label}</strong>
+            <span>{formatInteger(hoveredSegment.value)} items, {formatNumber(hoveredSegment.percent, 1)}% of roster</span>
+          </div>
+        ) : null}
+        <div
+          className="round-health-bar"
+          role="group"
+          aria-label={`Round roster breakdown. Scored ${formatInteger(breakdown.scored)}. Failed ${formatInteger(breakdown.failed)}. Pending ${formatInteger(breakdown.pending)}. Total roster ${formatInteger(breakdown.roster)}.`}
+        >
+          {breakdown.segments.map((segment) => (
+            <button
+              className={`round-health-segment round-health-segment-${segment.tone}`}
+              key={segment.key}
+              style={{ width: `${segment.percent}%` }}
+              type="button"
+              aria-label={`${segment.label} ${formatInteger(segment.value)} (${formatNumber(segment.percent, 1)}% of roster)`}
+              onMouseEnter={() => setHoveredSegmentKey(segment.key)}
+              onFocus={() => setHoveredSegmentKey(segment.key)}
+              onBlur={(event) => {
+                if (event.relatedTarget instanceof Node && interactiveRef.current?.contains(event.relatedTarget)) {
+                  return;
+                }
+
+                setHoveredSegmentKey(null);
+              }}
+              tabIndex={segment.percent > 0 ? 0 : -1}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="round-health-legend" aria-label="Round roster legend">
+        {breakdown.segments.map((segment) => (
+          <div className={`round-health-legend-item round-health-legend-${segment.tone}`} key={segment.key}>
+            <span className="round-health-legend-swatch" aria-hidden="true" />
+            <span className="round-health-legend-label">{segment.label}</span>
           </div>
         ))}
       </div>

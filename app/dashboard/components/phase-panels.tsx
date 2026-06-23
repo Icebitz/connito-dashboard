@@ -272,15 +272,6 @@ function PhasePanelSkeleton() {
   );
 }
 
-function PhaseWindowBlock({ label, blocks }: { label: string; blocks: number | null }) {
-  return (
-    <span className="phase-window-block" title={blocks === null ? undefined : `${label} block ${blocks}`}>
-      <small>{label}</small>
-      <strong>{formatBlock(blocks)}</strong>
-    </span>
-  );
-}
-
 type RoundHealthSegmentTone = "scored" | "failed" | "pending";
 
 type RoundHealthSegment = {

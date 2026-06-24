@@ -1,5 +1,5 @@
 import { LEADERBOARD_SOURCE, ROUND_TREND_SAMPLE_COUNT } from "./constants";
-import type { ApiResponse, DashboardModel, HistoryPoint, MinerRow, MinerScoreHistoryRound, UpcomingPhase, ValidatorHealth, ValidatorMetric } from "./types";
+import type { ApiResponse, DashboardModel, HistoryPoint, MinerRow, UpcomingPhase, ValidatorHealth, ValidatorMetric } from "./types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -64,6 +64,20 @@ function asNumberArray(value: unknown) {
     : [];
 }
 
+function createEmptyValidatorHealth(slot: number): ValidatorHealth {
+  return {
+    slot,
+    uid: null,
+    label: `Validator ${slot}`,
+    hotkey: null,
+    status: null,
+    chainActive: null,
+    promReachable: null,
+    lastChainUpdateBlock: null,
+    lastPromSampleAgeSeconds: null
+  };
+}
+
 function averageNumbers(values: Array<number | null | undefined>) {
   const numbers = values.filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
   return numbers.length ? numbers.reduce((sum, value) => sum + value, 0) / numbers.length : null;
@@ -79,10 +93,6 @@ function unwrapDashboardData(payload: unknown) {
 
 function getDashboardMeta(payload: unknown) {
   return isRecord(payload) && isRecord(payload.meta) ? payload.meta : null;
-}
-
-export function getMinerKey(row: Pick<MinerRow, "uid" | "hotkey" | "repo" | "revision">) {
-  return `${row.uid}::${row.hotkey}::${row.repo}::${row.revision}`;
 }
 
 function isBurnRow(row: Pick<MinerRow, "uid">) {
@@ -136,7 +146,6 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
         scoreLatest,
         scoreAverage,
         scoreSamples: asNumber(metric.score_samples),
-        scoreLatestAgeSeconds: asNumber(metric.score_latest_age_seconds),
         valLoss: asNumber(metric.val_loss) ?? asNumber(metric.validation_loss) ?? asNumber(metric.loss),
         weightSubmitted: asNumber(metric.weight_submitted) ?? asNumber(metric.weight),
         extractedAtBlock,
@@ -171,7 +180,6 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
         scoreLatest: null,
         scoreAverage: null,
         scoreSamples: null,
-        scoreLatestAgeSeconds: null,
         valLoss: null,
         weightSubmitted: null,
         extractedAtBlock: null,
@@ -190,20 +198,52 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
 
 function getValidatorHealth(meta: Record<string, unknown> | null): ValidatorHealth[] {
   const health = Array.isArray(meta?.validator_health) ? meta.validator_health.filter(isRecord) : [];
+  const missing = Array.isArray(meta?.missing_validators) ? meta.missing_validators.filter(isRecord) : [];
+  const bySlot = new Map<number, ValidatorHealth>();
 
-  return health
-    .map((validator) => ({
-      slot: asNumber(validator.validator_slot) ?? asNumber(validator.slot),
-      uid: asNumber(validator.validator_uid) ?? asNumber(validator.uid),
-      label: asText(validator.validator_label) ?? asText(validator.label),
-      hotkey: asText(validator.validator_hotkey) ?? asText(validator.hotkey),
-      status: asText(validator.validator_status) ?? asText(validator.status),
-      chainActive: asBoolean(validator.chain_active),
-      promReachable: asBoolean(validator.prom_reachable),
-      lastChainUpdateBlock: asNumber(validator.last_chain_update_block),
-      lastPromSampleAgeSeconds: asNumber(validator.last_prom_sample_age_seconds)
-    }))
-    .sort((a, b) => (a.slot ?? Number.MAX_SAFE_INTEGER) - (b.slot ?? Number.MAX_SAFE_INTEGER));
+  for (const validator of health) {
+    const slot = asNumber(validator.validator_slot) ?? asNumber(validator.slot);
+
+    if (slot === null) {
+      continue;
+    }
+
+    const existing = bySlot.get(slot) ?? createEmptyValidatorHealth(slot);
+    bySlot.set(slot, {
+      ...existing,
+      slot,
+      uid: asNumber(validator.validator_uid) ?? asNumber(validator.uid) ?? existing.uid,
+      label: asText(validator.validator_name) ?? asText(validator.validator_label) ?? asText(validator.label) ?? existing.label,
+      hotkey: asText(validator.validator_hotkey) ?? asText(validator.hotkey) ?? existing.hotkey,
+      status: asText(validator.validator_status) ?? asText(validator.status) ?? existing.status,
+      chainActive: asBoolean(validator.chain_active) ?? existing.chainActive,
+      promReachable: asBoolean(validator.prom_reachable) ?? existing.promReachable,
+      lastChainUpdateBlock: asNumber(validator.last_chain_update_block) ?? existing.lastChainUpdateBlock,
+      lastPromSampleAgeSeconds: asNumber(validator.last_prom_sample_age_seconds) ?? existing.lastPromSampleAgeSeconds
+    });
+  }
+
+  for (const validator of missing) {
+    const slot = asNumber(validator.validator_slot) ?? asNumber(validator.slot);
+
+    if (slot === null) {
+      continue;
+    }
+
+    const existing = bySlot.get(slot) ?? createEmptyValidatorHealth(slot);
+    bySlot.set(slot, {
+      ...existing,
+      slot,
+      uid: asNumber(validator.validator_uid) ?? asNumber(validator.uid) ?? existing.uid,
+      label: existing.label ?? asText(validator.validator_name) ?? asText(validator.validator_label) ?? asText(validator.label) ?? `Validator ${slot}`,
+      hotkey: existing.hotkey ?? asText(validator.validator_hotkey) ?? asText(validator.hotkey),
+      status: existing.status ?? "unconfigured",
+      chainActive: existing.chainActive ?? false,
+      promReachable: existing.promReachable ?? false
+    });
+  }
+
+  return Array.from(bySlot.values()).sort((a, b) => (a.slot ?? Number.MAX_SAFE_INTEGER) - (b.slot ?? Number.MAX_SAFE_INTEGER));
 }
 
 function getLeaderboardRows(data: Record<string, unknown>): MinerRow[] {
@@ -237,16 +277,10 @@ function getLeaderboardRows(data: Record<string, unknown>): MinerRow[] {
           ?? averageNumbers(validatorMetrics.map((metric) => metric.score)),
         loss: asNumber(row.val_loss) ?? asNumber(row.loss) ?? asNumber(row.validation_loss),
         deltaLoss: asNumber(row.delta_loss) ?? asNumber(row.loss_delta) ?? asNumber(row.deltaLoss),
-        scoreLatestAgeSeconds: asNumber(row.score_latest_age_seconds),
         incentive: asNumber(row.incentive),
         lossTrend: asNumberArray(row.loss_trend),
-        assignedValidatorSlots: asNumberArray(row.assigned_validator_slots),
-        verdictByValidatorSlots: asNumberArray(row.verdict_by_validator_slots),
         weight: asNumber(row.chain_weight_stake_weighted) ?? asNumber(row.weight_submitted),
-        evaluations: asNumber(row.evaluation_count) ?? asNumber(row.scored_by_count),
-        assigned: asBoolean(row.in_assignment),
-        validatorMetrics,
-        scoreHistory: []
+        validatorMetrics
       };
     })
     .sort((a, b) => {
@@ -294,18 +328,6 @@ function compareNullableNumbers(a: number | null, b: number | null, direction: "
   return direction === "asc" ? a - b : b - a;
 }
 
-function getBurnPercent(burnWeight: number | null | undefined, totalWeight: number | null | undefined) {
-  if (burnWeight === null || burnWeight === undefined || !Number.isFinite(burnWeight)) {
-    return null;
-  }
-
-  if (totalWeight !== null && totalWeight !== undefined && Number.isFinite(totalWeight) && totalWeight > 0) {
-    return (burnWeight / totalWeight) * 100;
-  }
-
-  return burnWeight <= 1 ? burnWeight * 100 : burnWeight;
-}
-
 function getRoundHistory(round: Record<string, unknown> | null): HistoryPoint[] {
   const history = Array.isArray(round?.baseline_loss_history) ? round.baseline_loss_history.filter(isRecord) : [];
 
@@ -333,58 +355,6 @@ function getRoundHistory(round: Record<string, unknown> | null): HistoryPoint[] 
       return a.round - b.round;
     })
     .slice(-ROUND_TREND_SAMPLE_COUNT);
-}
-
-function getHistoryValidatorKey(metric: Pick<ValidatorMetric, "slot" | "uid" | "label">) {
-  return `${metric.slot ?? ""}::${metric.uid ?? ""}::${metric.label}`;
-}
-
-function getMinerScoreHistoryMap(payload: unknown) {
-  const historyByUid = new Map<string, MinerScoreHistoryRound[]>();
-  const snapshots = Array.isArray(payload) ? payload.filter(isRecord) : [];
-
-  for (const snapshot of snapshots) {
-    const roundId = asNumber(snapshot.round) ?? asNumber(snapshot.roundId) ?? asNumber(snapshot.round_id);
-
-    if (roundId === null || !("data" in snapshot)) {
-      continue;
-    }
-
-    const data = unwrapDashboardData(snapshot.data);
-    const rows = getLeaderboardRows(data).filter((row) => !isBurnRow(row));
-
-    for (const row of rows) {
-      const history = historyByUid.get(row.uid) ?? [];
-      history.push({
-        round: roundId,
-        rank: row.rank,
-        phaseStartedAtBlock: asNumber(snapshot.phaseStartedAtBlock) ?? asNumber(snapshot.phase_started_at_block),
-        fetchedAt: asText(snapshot.fetchedAt) ?? asText(snapshot.fetched_at) ?? "",
-        validators: row.validatorMetrics.map((metric) => ({
-          validatorKey: getHistoryValidatorKey(metric),
-          label: metric.label,
-          slot: metric.slot,
-          uid: metric.uid,
-          rank: metric.rank,
-          rankTotal: metric.rankTotal,
-          valLoss: metric.valLoss,
-          score: metric.score,
-          weightSubmitted: metric.weightSubmitted,
-          evalStatusLabel: metric.evalStatusLabel,
-          extractedAtBlock: metric.extractedAtBlock
-        }))
-      });
-      historyByUid.set(row.uid, history);
-    }
-  }
-
-  for (const [uid, history] of historyByUid) {
-    historyByUid.set(uid, history
-      .sort((a, b) => a.round - b.round || (a.phaseStartedAtBlock ?? Number.MAX_SAFE_INTEGER) - (b.phaseStartedAtBlock ?? Number.MAX_SAFE_INTEGER))
-      .slice(-8));
-  }
-
-  return historyByUid;
 }
 
 function completeUpcomingPhases(phases: UpcomingPhase[]) {
@@ -452,24 +422,17 @@ function getProgress(into: number | null, remaining: number | null, start: numbe
 export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardModel {
   const data = unwrapDashboardData(leaderboard?.data);
   const meta = getDashboardMeta(leaderboard?.data);
-  const scoreHistoryByUid = getMinerScoreHistoryMap(leaderboard?.leaderboardHistory);
   const subnet = isRecord(data.subnet) ? data.subnet : null;
   const phase = isRecord(data.phase) ? data.phase : null;
   const round = isRecord(data.round) ? data.round : null;
   const roundStats = isRecord(round?.stats) ? round.stats : null;
   const headBlock = asNumber(phase?.head_block);
   const allRows = getLeaderboardRows(data);
-  const burnRow = allRows.find(isBurnRow) ?? null;
-  const totalWeightIncludingBurn = allRows
-    .map((row) => row.weight)
-    .filter((value): value is number => value !== null)
-    .reduce((sum, value) => sum + value, 0);
   const rows = allRows
     .filter((row) => !isBurnRow(row))
     .map((row, index) => ({
       ...row,
-      rank: index + 1,
-      scoreHistory: scoreHistoryByUid.get(row.uid) ?? []
+      rank: index + 1
     }));
   const history = getRoundHistory(round);
   const phaseName = asText(phase?.name) ?? "-";
@@ -485,16 +448,16 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
     ? cycleBlockFromIndex
     : headBlock !== null && phaseStart !== null ? headBlock - phaseStart : null;
   const upcomingPhases = getUpcomingPhases(phase, headBlock);
-  const scores = rows.map((row) => row.score).filter((value): value is number => value !== null);
-  const losses = rows.map((row) => row.loss).filter((value): value is number => value !== null);
-  const weights = rows.map((row) => row.weight).filter((value): value is number => value !== null);
-  const assigned = rows.filter((row) => row.assigned === true).length;
   const metaStale = asBoolean(meta?.stale) ?? false;
+  const lastSuccessTs = asNumber(meta?.last_success_ts);
+  const pollIntervalSeconds = asNumber(meta?.poll_interval_seconds);
   const validatorHealth = getValidatorHealth(meta);
   const roundScored = asNumber(roundStats?.scored);
   const roundPending = asNumber(roundStats?.pending);
   const roundFailed = asNumber(roundStats?.failed);
   const roundRoster = (roundScored ?? 0) + (roundPending ?? 0) + (roundFailed ?? 0);
+  const successfulCommitsCount = asNumber(round?.successful_commits_count);
+  const successfulCommitsRate = asNumber(round?.successful_commits_rate);
 
   return {
     source: typeof leaderboard?.source === "string" ? leaderboard.source : LEADERBOARD_SOURCE,
@@ -526,24 +489,15 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
       scored: roundScored,
       pending: roundPending,
       failed: roundFailed,
-      downloaded: asNumber(roundStats?.downloaded),
-      claimed: asNumber(roundStats?.claimed),
+      successfulCommitsCount,
+      successfulCommitsRate,
       history
-    },
-    metrics: {
-      rows: rows.length,
-      assigned,
-      topScore: scores.length ? Math.max(...scores) : null,
-      averageScore: scores.length ? scores.reduce((sum, value) => sum + value, 0) / scores.length : null,
-      bestLoss: losses.length ? Math.min(...losses) : null,
-      averageLoss: losses.length ? losses.reduce((sum, value) => sum + value, 0) / losses.length : null,
-      topWeight: weights.length ? Math.max(...weights) : null,
-      totalWeight: weights.length ? weights.reduce((sum, value) => sum + value, 0) : null,
-      burnPercent: getBurnPercent(burnRow?.weight, totalWeightIncludingBurn || null)
     },
     meta: {
       validatorCount: asNumber(meta?.validator_count) ?? asNumber(subnet?.validator_count),
       polledValidatorCount: asNumber(meta?.polled_validator_count),
+      lastSuccessTs,
+      pollIntervalSeconds,
       stale: metaStale,
       staleReason: asText(meta?.stale_reason),
       servedFrom: asText(meta?.served_from),

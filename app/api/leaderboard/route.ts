@@ -2,12 +2,15 @@ import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { NextResponse } from "next/server";
 
-const SOURCE_URL = "https://dashboard-api.connito.ai/api/v2/leaderboard";
+import { LEADERBOARD_SOURCE } from "../../dashboard/constants";
+
+const SOURCE_URL = LEADERBOARD_SOURCE;
 const UPSTREAM_TIMEOUT_MS = 20_000;
 const MAX_ATTEMPTS = 2;
-const CACHE_FILE = join(process.cwd(), ".next", "cache", "connito-leaderboard-v2.json");
+const CACHE_VERSION = "v3";
+const CACHE_FILE = join(process.cwd(), ".next", "cache", `connito-leaderboard-${CACHE_VERSION}.json`);
 const HISTORY_DIR = join(process.cwd(), ".next", "cache");
-const CURRENT_HISTORY_FILE = join(HISTORY_DIR, "leaderboard-v2.json");
+const CURRENT_HISTORY_FILE = join(HISTORY_DIR, `leaderboard-${CACHE_VERSION}.json`);
 const HISTORY_ROUND_LIMIT = 8;
 
 type CachedLeaderboard = {
@@ -128,7 +131,7 @@ function getRoundId(payload: unknown) {
 }
 
 function getHistoryFile(index: number) {
-  return join(HISTORY_DIR, `leaderboard-v2-${index}.json`);
+  return join(HISTORY_DIR, `leaderboard-${CACHE_VERSION}-${index}.json`);
 }
 
 function getSnapshotKey(snapshot: Pick<LeaderboardHistorySnapshot, "roundId" | "phaseStartedAtBlock">) {

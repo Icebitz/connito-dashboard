@@ -1,92 +1,38 @@
-import { Database, ExternalLink, GitFork, Moon, RefreshCw, Sun } from "lucide-react";
+"use client";
 
-import type { DashboardStatus, Theme } from "../types";
+import type { DashboardModel, Theme } from "../types";
+import { DashboardHeaderBar } from "./dashboard-header-bar";
+import { DashboardHeaderInfo } from "./dashboard-header-info";
 
 type DashboardHeaderProps = {
   netuid: number;
   source: string;
-  status: DashboardStatus;
   theme: Theme;
-  activeTab: "dashboard" | "history";
-  loading: boolean;
-  title?: string;
-  subtitle?: string;
-  onRefresh: () => void;
-  onTabChange: (tab: "dashboard" | "history") => void;
+  phase: DashboardModel["phase"];
+  subnet: DashboardModel["subnet"];
+  subtitle: string;
   onThemeToggle: () => void;
 };
 
 export function DashboardHeader({
   netuid,
   source,
-  status,
   theme,
-  activeTab,
-  loading,
-  title = "Connito Subnet",
+  phase,
+  subnet,
   subtitle,
-  onRefresh,
-  onTabChange,
   onThemeToggle
 }: DashboardHeaderProps) {
   return (
-    <header className="app-header">
-      <div className="brand-block">
-        <img className="brand-logo" src="/logo.svg" alt="" width="48" height="48" />
-        <div className="brand-copy">
-          <div className="brand-title-row">
-            <h1>{title} <span>{netuid}</span></h1>
-            <nav className="dashboard-tabs dashboard-tabs-inline" aria-label="Dashboard views">
-              <button
-                type="button"
-                className={activeTab === "dashboard" ? "dashboard-tab-active" : undefined}
-                aria-pressed={activeTab === "dashboard"}
-                onClick={() => onTabChange("dashboard")}
-              >
-                Dashboard
-              </button>
-              <button
-                type="button"
-                className={activeTab === "history" ? "dashboard-tab-active" : undefined}
-                aria-pressed={activeTab === "history"}
-                onClick={() => onTabChange("history")}
-              >
-                History
-              </button>
-            </nav>
-          </div>
-          {subtitle ? <p>{subtitle}</p> : null}
-        </div>
-      </div>
-
-      <div className="header-actions">
-        <a className="api-button" href={source} target="_blank" rel="noreferrer" aria-label="Open leaderboard API source">
-          <Database size={15} />
-          API
-          <ExternalLink size={13} />
-        </a>
-        <a className="api-button" href="https://github.com/Connito-AI/Connito" target="_blank" rel="noreferrer" aria-label="Open Connito GitHub repository">
-          <GitFork size={15} />
-          GitHub
-          <ExternalLink size={13} />
-        </a>
-        <button
-          type="button"
-          className="theme-toggle"
-          onClick={onThemeToggle}
-          title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-        >
-          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-        </button>
-        <span className={`status-pill status-${status.toLowerCase()}`}>
-          <span />
-          {status}
-        </span>
-        <button type="button" onClick={onRefresh} disabled={loading} title="Refresh dashboard">
-          <RefreshCw size={16} className={loading ? "spin" : ""} />
-        </button>
-      </div>
+    <header className="lb-header lb-header-compact">
+      <DashboardHeaderBar
+        netuid={netuid}
+        source={source}
+        theme={theme}
+        subtitle={subtitle}
+        onThemeToggle={onThemeToggle}
+      />
+      <DashboardHeaderInfo phase={phase} subnet={subnet} />
     </header>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./leaderboard.css";
 
 export const metadata: Metadata = {
   title: "Connito Subnet 102 Leaderboard",

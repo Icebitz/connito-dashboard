@@ -56,20 +56,6 @@ export function formatBlock(value: number | null | undefined) {
   return Intl.NumberFormat("en", { maximumFractionDigits: 0 }).format(value);
 }
 
-export function formatDuration(ms: number) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const seconds = totalSeconds % 60;
-  const totalMinutes = Math.floor(totalSeconds / 60);
-  const minutes = totalMinutes % 60;
-  const hours = Math.floor(totalMinutes / 60);
-
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  }
-
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
 export function formatAgeSecondsShort(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return "-";
@@ -96,46 +82,12 @@ export function formatAgeSecondsShort(value: number | null | undefined) {
   return `${seconds}s`;
 }
 
-export function formatBlockDuration(blocks: number | null | undefined) {
+export function formatBlockMinutes(blocks: number | null | undefined, digits = 1) {
   if (blocks === null || blocks === undefined || !Number.isFinite(blocks)) {
     return "-";
   }
 
-  const totalSeconds = Math.max(0, Math.round(blocks * BLOCK_TIME_SECONDS));
-  const days = Math.floor(totalSeconds / 86_400);
-  const hours = Math.floor((totalSeconds % 86_400) / 3_600);
-  const minutes = Math.floor((totalSeconds % 3_600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (days > 0) {
-    return `${days}d ${hours}h`;
-  }
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-
-  if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
-  }
-
-  return `${seconds}s`;
-}
-
-export function formatBlockCount(blocks: number | null | undefined) {
-  const formatted = formatBlock(blocks);
-  if (formatted === "-") {
-    return "-";
-  }
-
-  return `${formatted} ${blocks === 1 ? "block" : "blocks"}`;
-}
-
-export function formatBlockDurationWithCount(blocks: number | null | undefined) {
-  const duration = formatBlockDuration(blocks);
-  const count = formatBlockCount(blocks);
-
-  return duration === "-" || count === "-" ? "-" : `${duration} (${count})`;
+  return `${formatNumber((blocks * BLOCK_TIME_SECONDS) / 60, digits)} min`;
 }
 
 export function shortText(value: string, start = 8, end = 6) {
@@ -177,8 +129,4 @@ export function getHuggingFaceRevisionUrl(repo: string, revision: string) {
   }
 
   return `${repoUrl}/tree/${encodeURIComponent(revision)}`;
-}
-
-export function getHotkeyUrl(hotkey: string) {
-  return hotkey && hotkey !== "-" ? `https://taostats.io/hotkey/${encodeURIComponent(hotkey)}` : null;
 }

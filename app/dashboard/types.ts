@@ -26,16 +26,10 @@ export type MinerRow = {
   score: number | null;
   loss: number | null;
   deltaLoss: number | null;
-  scoreLatestAgeSeconds: number | null;
   incentive: number | null;
   lossTrend: Array<number | null>;
-  assignedValidatorSlots: number[];
-  verdictByValidatorSlots: number[];
   weight: number | null;
-  evaluations: number | null;
-  assigned: boolean | null;
   validatorMetrics: ValidatorMetric[];
-  scoreHistory: MinerScoreHistoryRound[];
 };
 
 export type ValidatorMetric = {
@@ -48,7 +42,6 @@ export type ValidatorMetric = {
   scoreLatest: number | null;
   scoreAverage: number | null;
   scoreSamples: number | null;
-  scoreLatestAgeSeconds: number | null;
   valLoss: number | null;
   weightSubmitted: number | null;
   extractedAtBlock: number | null;
@@ -61,28 +54,6 @@ export type ValidatorMetric = {
   rank: number | null;
   rankTotal: number | null;
   failureReasons: string[];
-};
-
-export type MinerScoreHistoryRound = {
-  round: number;
-  rank: number | null;
-  phaseStartedAtBlock: number | null;
-  fetchedAt: string;
-  validators: MinerScoreHistoryValidator[];
-};
-
-export type MinerScoreHistoryValidator = {
-  validatorKey: string;
-  label: string;
-  slot: number | null;
-  uid: number | null;
-  rank: number | null;
-  rankTotal: number | null;
-  valLoss: number | null;
-  score: number | null;
-  weightSubmitted: number | null;
-  evalStatusLabel: string | null;
-  extractedAtBlock: number | null;
 };
 
 export type ValidatorHealth = {
@@ -146,24 +117,15 @@ export type DashboardModel = {
     scored: number | null;
     pending: number | null;
     failed: number | null;
-    downloaded: number | null;
-    claimed: number | null;
+    successfulCommitsCount: number | null;
+    successfulCommitsRate: number | null;
     history: HistoryPoint[];
-  };
-  metrics: {
-    rows: number;
-    assigned: number;
-    topScore: number | null;
-    averageScore: number | null;
-    bestLoss: number | null;
-    averageLoss: number | null;
-    topWeight: number | null;
-    totalWeight: number | null;
-    burnPercent: number | null;
   };
   meta: {
     validatorCount: number | null;
     polledValidatorCount: number | null;
+    lastSuccessTs: number | null;
+    pollIntervalSeconds: number | null;
     stale: boolean;
     staleReason: string | null;
     servedFrom: string | null;

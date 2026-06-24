@@ -1179,14 +1179,14 @@ button:disabled {
 }
 
 .lb-search-field {
-  flex: 1 1 360px;
+  flex: 1 1 280px;
   width: auto;
   min-width: 0;
   padding: 0 10px;
 }
 
 .lb-search-field-wide {
-  min-width: 280px;
+  min-width: 220px;
 }
 
 .lb-search-field input {
@@ -1227,6 +1227,57 @@ button:disabled {
   outline: 0;
   background: transparent;
   color: var(--text);
+}
+
+.lb-pinned-only-switch {
+  min-height: 34px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.lb-pinned-only-switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lb-pinned-only-switch i {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  border: 1px solid var(--line);
+  background: var(--surface-3);
+}
+
+.lb-pinned-only-switch i::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  background: var(--muted);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.lb-pinned-only-switch input:checked + i::after {
+  transform: translateX(14px);
+  background: var(--accent);
+}
+
+.lb-pinned-only-switch:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .lb-pagination-inline {
@@ -1283,6 +1334,33 @@ button:disabled {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
   font-synthesis: none;
+}
+
+.lb-col-pin {
+  width: 34px;
+  text-align: center;
+}
+
+.lb-pin-button {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.lb-pin-button:hover,
+.lb-pin-button:focus-visible,
+.lb-pin-button-active {
+  color: var(--accent);
+  outline: none;
+}
+
+.lb-pin-button-active svg {
+  fill: currentColor;
 }
 
 .lb-table tbody .lb-col-num.lb-col-num-positive {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pin, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { VALIDATOR_COLUMNS } from "../constants";
@@ -11,6 +11,8 @@ import { CopyHotkeyButton } from "./copy-hotkey-button";
 import { MinerDetailsModal } from "./miner-details-modal";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, "all"] as const;
+const SORT_OPTIONS = ["rank", "group", "incentive"] as const;
+const PINNED_UIDS_STORAGE_KEY = "connito:pinned-uids";
 
 type LeaderboardSectionProps = {
   allRows: MinerRow[];
@@ -21,13 +23,23 @@ type LeaderboardSectionProps = {
 };
 
 type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number];
+type SortOption = (typeof SORT_OPTIONS)[number];
 
 export function LeaderboardSection({ allRows, filteredRows, query, validatorHealth, onQueryChange }: LeaderboardSectionProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSizeOption>(25);
+  const [sortBy, setSortBy] = useState<SortOption>("rank");
+  const [pinnedOnly, setPinnedOnly] = useState(false);
+  const [pinnedUids, setPinnedUids] = useState<string[]>([]);
+  const [pinnedUidsHydrated, setPinnedUidsHydrated] = useState(false);
   const [detailUid, setDetailUid] = useState<string | null>(null);
 
-  const sortedRows = useMemo(() => [...filteredRows].sort((a, b) => a.rank - b.rank), [filteredRows]);
+  const pinnedUidSet = useMemo(() => new Set(pinnedUids), [pinnedUids]);
+  const displayRows = useMemo(
+    () => pinnedOnly ? filteredRows.filter((row) => pinnedUidSet.has(row.uid)) : filteredRows,
+    [filteredRows, pinnedOnly, pinnedUidSet]
+  );
+  const sortedRows = useMemo(() => [...displayRows].sort((a, b) => compareRows(a, b, sortBy)), [displayRows, sortBy]);
   const pageCount = pageSize === "all" ? 1 : Math.max(1, Math.ceil(sortedRows.length / pageSize));
   const safePage = Math.min(currentPage, pageCount);
   const pageStart = pageSize === "all" ? 0 : (safePage - 1) * pageSize;
@@ -37,8 +49,37 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
   const selectedRow = useMemo(() => detailUid ? allRows.find((row) => row.uid === detailUid) ?? null : null, [allRows, detailUid]);
 
   useEffect(() => {
+    const storedValue = window.localStorage.getItem(PINNED_UIDS_STORAGE_KEY);
+
+    if (!storedValue) {
+      setPinnedUidsHydrated(true);
+      return;
+    }
+
+    try {
+      const parsedValue = JSON.parse(storedValue);
+
+      if (Array.isArray(parsedValue)) {
+        setPinnedUids(parsedValue.filter((value): value is string => typeof value === "string"));
+      }
+    } catch {
+      window.localStorage.removeItem(PINNED_UIDS_STORAGE_KEY);
+    } finally {
+      setPinnedUidsHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!pinnedUidsHydrated) {
+      return;
+    }
+
+    window.localStorage.setItem(PINNED_UIDS_STORAGE_KEY, JSON.stringify(pinnedUids));
+  }, [pinnedUids, pinnedUidsHydrated]);
+
+  useEffect(() => {
     setCurrentPage(1);
-  }, [query, pageSize]);
+  }, [query, pageSize, sortBy, pinnedOnly, pinnedUids]);
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, pageCount));
@@ -53,10 +94,20 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
           </div>
 
           <small>
-            Showing {visibleStart}-{visibleEnd} of {filteredRows.length}
+            Showing {visibleStart}-{visibleEnd} of {displayRows.length}
           </small>
 
           <div className="lb-leaderboard-controls">
+            <label className="lb-pinned-only-switch">
+              <span>Pinned Only</span>
+              <input
+                type="checkbox"
+                checked={pinnedOnly}
+                onChange={(event) => setPinnedOnly(event.target.checked)}
+              />
+              <i aria-hidden="true" />
+            </label>
+
             <label className="lb-search-field lb-search-field-wide">
               <Search size={15} />
               <input
@@ -70,6 +121,22 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
                   <X size={14} />
                 </button>
               ) : null}
+            </label>
+
+            <label className="lb-page-size-field">
+              <span>Sort</span>
+              <select
+                aria-label="Sort leaderboard"
+                value={sortBy}
+                onChange={(event) => {
+                  setSortBy(parseSortOption(event.target.value));
+                  setCurrentPage(1);
+                }}
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option} value={option}>{formatSortOption(option)}</option>
+                ))}
+              </select>
             </label>
 
             <label className="lb-page-size-field">
@@ -117,6 +184,7 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
         <table className="lb-table">
           <thead>
             <tr>
+              <th className="lb-col-pin" aria-label="Pin row" />
               <th className="lb-col-rank">Rank</th>
               <th className="lb-col-uid">UID</th>
               <th className="lb-col-group">Group</th>
@@ -133,12 +201,16 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
               <LeaderboardRow
                 key={row.uid}
                 row={row}
+                pinned={pinnedUidSet.has(row.uid)}
+                onTogglePinned={() => setPinnedUids((uids) => togglePinnedUid(uids, row.uid))}
                 onInspectRow={() => setDetailUid(row.uid)}
               />
             ))}
-            {!filteredRows.length ? (
+            {!displayRows.length ? (
               <tr>
-                <td colSpan={9} className="lb-empty-cell">No miners match the current search.</td>
+                <td colSpan={10} className="lb-empty-cell">
+                  {pinnedOnly ? "No pinned miners match the current search." : "No miners match the current search."}
+                </td>
               </tr>
             ) : null}
           </tbody>
@@ -158,9 +230,13 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
 
 function LeaderboardRow({
   row,
+  pinned,
+  onTogglePinned,
   onInspectRow
 }: {
   row: MinerRow;
+  pinned: boolean;
+  onTogglePinned: () => void;
   onInspectRow: () => void;
 }) {
   const repoRevisionUrl = getHuggingFaceRepoUrl(row.repo);
@@ -183,6 +259,20 @@ function LeaderboardRow({
         }
       }}
     >
+      <td className="lb-col-pin">
+        <button
+          type="button"
+          className={`lb-pin-button${pinned ? " lb-pin-button-active" : ""}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onTogglePinned();
+          }}
+          aria-label={pinned ? `Unpin UID ${row.uid}` : `Pin UID ${row.uid}`}
+          title={pinned ? `Unpin UID ${row.uid}` : `Pin UID ${row.uid}`}
+        >
+          <Pin size={14} />
+        </button>
+      </td>
       <td className="lb-col-rank">{row.rank}</td>
       <td className="lb-col-uid">{row.uid}</td>
       <td className="lb-col-group">
@@ -373,6 +463,72 @@ function parsePageSizeOption(value: string): PageSizeOption {
 
   const numericValue = Number(value);
   return PAGE_SIZE_OPTIONS.includes(numericValue as PageSizeOption) ? numericValue as PageSizeOption : 25;
+}
+
+function parseSortOption(value: string): SortOption {
+  return SORT_OPTIONS.includes(value as SortOption) ? value as SortOption : "rank";
+}
+
+function formatSortOption(option: SortOption) {
+  return option[0].toUpperCase() + option.slice(1);
+}
+
+function togglePinnedUid(pinnedUids: string[], uid: string) {
+  if (pinnedUids.includes(uid)) {
+    return pinnedUids.filter((pinnedUid) => pinnedUid !== uid);
+  }
+
+  return [...pinnedUids, uid];
+}
+
+function compareRows(a: MinerRow, b: MinerRow, sortBy: SortOption) {
+  if (sortBy === "group") {
+    return compareText(a.cohortGroup, b.cohortGroup) || a.rank - b.rank;
+  }
+
+  if (sortBy === "incentive") {
+    return compareNullableNumberDesc(a.incentive, b.incentive) || a.rank - b.rank;
+  }
+
+  return a.rank - b.rank;
+}
+
+function compareText(a: string | null, b: string | null) {
+  const aValue = a?.trim() || "";
+  const bValue = b?.trim() || "";
+
+  if (!aValue && !bValue) {
+    return 0;
+  }
+
+  if (!aValue) {
+    return 1;
+  }
+
+  if (!bValue) {
+    return -1;
+  }
+
+  return aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: "base" });
+}
+
+function compareNullableNumberDesc(a: number | null, b: number | null) {
+  const aValid = a !== null && Number.isFinite(a);
+  const bValid = b !== null && Number.isFinite(b);
+
+  if (!aValid && !bValid) {
+    return 0;
+  }
+
+  if (!aValid) {
+    return 1;
+  }
+
+  if (!bValid) {
+    return -1;
+  }
+
+  return b - a;
 }
 
 function hasMetricValue(value: number | null | undefined) {

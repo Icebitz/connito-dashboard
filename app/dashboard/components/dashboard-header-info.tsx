@@ -15,20 +15,26 @@ export function DashboardHeaderInfo({ phase, subnet }: DashboardHeaderInfoProps)
   const phaseBlockTotal = getPhaseBlockTotal(blocksCompleted, phase.blocksRemaining);
   const validatorCount = subnet.validators ?? null;
   const currentPhaseName = formatHeading(phase.name);
+  const phaseTone = getPhaseTone(phase.name);
 
   return (
     <div className="lb-header-info" aria-label="Leaderboard summary">
       <article className="lb-card lb-header-card">
-        <div className="lb-header-column-head">Miners</div>
-        <strong className="lb-card-value">{formatInteger(subnet.miners)}</strong>
+        <div className="lb-header-stat-list">
+          <StatRow label="Miners" value={formatInteger(subnet.miners)} />
+          <StatRow label="Validators" value={formatInteger(validatorCount)} />
+        </div>
       </article>
 
       <article className="lb-card lb-header-card">
-        <div className="lb-header-column-head">Validators</div>
-        <strong className="lb-card-value">{formatInteger(validatorCount)}</strong>
+        <div className="lb-header-stat-list">
+          <StatRow label="Cycle" value={`# ${formatBlock(phase.cycleIndex)}`} />
+          <StatRow label="Head Block" value={formatBlock(phase.headBlock)} />
+          <StatRow label="Blocks Remaining" value={formatBlock(phase.blocksRemaining)} />
+        </div>
       </article>
 
-      <article className="lb-card lb-header-card lb-header-card-current">
+      <article className={`lb-card lb-header-card lb-header-card-current lb-phase-tone-${phaseTone}`}>
         <div className="lb-header-column-head">Current Phase</div>
         <div className="lb-header-current-headline">
           <span>{currentPhaseName}</span>
@@ -62,6 +68,15 @@ export function DashboardHeaderInfo({ phase, subnet }: DashboardHeaderInfoProps)
   );
 }
 
+function StatRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="lb-header-stat-row">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
 function formatHeading(value: string | null | undefined) {
   if (!value || !value.trim()) {
     return "Train";
@@ -81,4 +96,42 @@ function getPhaseBlockTotal(blocksCompleted: number | null, blocksRemaining: num
 
   const total = blocksCompleted + blocksRemaining;
   return total > 0 ? total : null;
+}
+
+function getPhaseTone(value: string | null | undefined) {
+  const normalized = value?.trim().toLowerCase() ?? "";
+
+  if (!normalized) {
+    return "neutral";
+  }
+
+  if (normalized.includes("submit")) {
+    return "submission";
+  }
+
+  if (normalized.includes("validat") || normalized.includes("score")) {
+    return "validate";
+  }
+
+  if (normalized.includes("merge")) {
+    return "merge";
+  }
+
+  if (normalized.includes("commit")) {
+    return "commit";
+  }
+
+  if (normalized.includes("distribut")) {
+    return "distribute";
+  }
+
+  if (normalized.includes("train")) {
+    return "train";
+  }
+
+  if (normalized.includes("wait")) {
+    return "waiting";
+  }
+
+  return "neutral";
 }

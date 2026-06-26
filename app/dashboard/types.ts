@@ -1,6 +1,7 @@
 export type ApiResponse = {
   fetchedAt?: string;
   ok?: boolean;
+  apiVersion?: unknown;
   source?: unknown;
   data?: unknown;
   leaderboardHistory?: unknown;

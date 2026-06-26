@@ -4,11 +4,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { DashboardHeader } from "./dashboard/components/dashboard-header";
 import { LeaderboardSection } from "./dashboard/components/leaderboard-section";
-import { Notice } from "./dashboard/components/notice";
 import { RoundDetailsPanel } from "./dashboard/components/round-details-panel";
 import { ValidatorsSection } from "./dashboard/components/validators-section";
-import { REFRESH_MS, THEME_STORAGE_KEY } from "./dashboard/constants";
-import { formatBlock } from "./dashboard/format";
+import {
+  API_VERSION_STORAGE_KEY,
+  DEFAULT_LEADERBOARD_API_VERSION,
+  DEFAULT_REFRESH_INTERVAL_SECONDS,
+  REFRESH_INTERVAL_OPTIONS_SECONDS,
+  REFRESH_INTERVAL_STORAGE_KEY,
+  THEME_STORAGE_KEY,
+  type LeaderboardApiVersion,
+  type RefreshIntervalSeconds
+} from "./dashboard/constants";
 import { buildDashboardModel } from "./dashboard/model";
 import type { ApiResponse, Theme } from "./dashboard/types";
 
@@ -17,13 +24,18 @@ export default function Leaderboard() {
   const [query, setQuery] = useState("");
   const [theme, setTheme] = useState<Theme>("dark");
   const [themeReady, setThemeReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [apiVersion, setApiVersion] = useState<LeaderboardApiVersion>(DEFAULT_LEADERBOARD_API_VERSION);
+  const [apiVersionReady, setApiVersionReady] = useState(false);
+  const [refreshIntervalSeconds, setRefreshIntervalSeconds] = useState<RefreshIntervalSeconds>(DEFAULT_REFRESH_INTERVAL_SECONDS);
+  const [refreshIntervalReady, setRefreshIntervalReady] = useState(false);
 
   const load = useCallback(async () => {
-    setError(null);
-
     try {
-      const leaderboardResponse = await fetch(`/api/leaderboard?t=${Date.now()}`, { cache: "no-store" });
+      const params = new URLSearchParams({
+        version: apiVersion,
+        t: String(Date.now())
+      });
+      const leaderboardResponse = await fetch(`/api/leaderboard?${params}`, { cache: "no-store" });
       const leaderboardBody = (await leaderboardResponse.json()) as ApiResponse;
 
       if (!leaderboardResponse.ok || !leaderboardBody.ok) {
@@ -31,17 +43,52 @@ export default function Leaderboard() {
       }
 
       setLeaderboard(leaderboardBody);
-      setError(leaderboardBody.warning ?? null);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to refresh dashboard data.");
+      console.error(loadError);
     }
-  }, []);
+  }, [apiVersion]);
 
   useEffect(() => {
     void load();
-    const timer = window.setInterval(() => void load(), REFRESH_MS);
+    const timer = window.setInterval(() => void load(), refreshIntervalSeconds * 1_000);
     return () => window.clearInterval(timer);
-  }, [load]);
+  }, [load, refreshIntervalSeconds]);
+
+  useEffect(() => {
+    const storedApiVersion = window.localStorage.getItem(API_VERSION_STORAGE_KEY);
+    const initialApiVersion: LeaderboardApiVersion = storedApiVersion === "v2" || storedApiVersion === "v3"
+      ? storedApiVersion
+      : DEFAULT_LEADERBOARD_API_VERSION;
+
+    setApiVersion(initialApiVersion);
+    setApiVersionReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!apiVersionReady) {
+      return;
+    }
+
+    window.localStorage.setItem(API_VERSION_STORAGE_KEY, apiVersion);
+  }, [apiVersion, apiVersionReady]);
+
+  useEffect(() => {
+    const storedRefreshInterval = Number(window.localStorage.getItem(REFRESH_INTERVAL_STORAGE_KEY));
+    const initialRefreshInterval = REFRESH_INTERVAL_OPTIONS_SECONDS.includes(storedRefreshInterval as RefreshIntervalSeconds)
+      ? storedRefreshInterval as RefreshIntervalSeconds
+      : DEFAULT_REFRESH_INTERVAL_SECONDS;
+
+    setRefreshIntervalSeconds(initialRefreshInterval);
+    setRefreshIntervalReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!refreshIntervalReady) {
+      return;
+    }
+
+    window.localStorage.setItem(REFRESH_INTERVAL_STORAGE_KEY, String(refreshIntervalSeconds));
+  }, [refreshIntervalSeconds, refreshIntervalReady]);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -80,17 +127,21 @@ export default function Leaderboard() {
       .toLowerCase()
       .includes(needle));
   }, [model.rows, query]);
-  const headerSubtitle = `Cycle #${formatBlock(model.phase.cycleIndex)} · Head Block ${formatBlock(model.phase.headBlock)} · Blocks Remaining ${formatBlock(model.phase.blocksRemaining)}`;
-
   return (
     <main className="lb-shell">
       <DashboardHeader
         netuid={model.subnet.netuid}
         source={model.source}
         theme={theme}
+        apiVersion={apiVersion}
+        refreshIntervalSeconds={refreshIntervalSeconds}
         phase={model.phase}
         subnet={model.subnet}
-        subtitle={headerSubtitle}
+        onApiVersionChange={(nextApiVersion) => {
+          setLeaderboard(null);
+          setApiVersion(nextApiVersion);
+        }}
+        onRefreshIntervalChange={setRefreshIntervalSeconds}
         onThemeToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")}
       />
 
@@ -110,8 +161,6 @@ export default function Leaderboard() {
       />
 
       <ValidatorsSection rows={model.rows} validatorHealth={model.meta.validatorHealth} />
-
-      <Notice message={error} />
     </main>
   );
 }

@@ -1,8 +1,14 @@
 "use client";
 
-import { Database, ExternalLink, GitBranch, MoonStar, SunMedium } from "lucide-react";
+import type { ReactNode } from "react";
+import { Clock3, Database, ExternalLink, GitBranch, MoonStar, SunMedium } from "lucide-react";
 
-import { GITHUB_REPOSITORY_URL } from "../constants";
+import {
+  GITHUB_REPOSITORY_URL,
+  REFRESH_INTERVAL_OPTIONS_SECONDS,
+  type LeaderboardApiVersion,
+  type RefreshIntervalSeconds
+} from "../constants";
 import { formatInteger } from "../format";
 import type { Theme } from "../types";
 
@@ -10,7 +16,11 @@ type DashboardHeaderBarProps = {
   netuid: number;
   source: string;
   theme: Theme;
-  subtitle: string;
+  apiVersion: LeaderboardApiVersion;
+  refreshIntervalSeconds: RefreshIntervalSeconds;
+  subtitle?: ReactNode;
+  onApiVersionChange: (apiVersion: LeaderboardApiVersion) => void;
+  onRefreshIntervalChange: (seconds: RefreshIntervalSeconds) => void;
   onThemeToggle: () => void;
 };
 
@@ -18,7 +28,11 @@ export function DashboardHeaderBar({
   netuid,
   source,
   theme,
+  apiVersion,
+  refreshIntervalSeconds,
   subtitle,
+  onApiVersionChange,
+  onRefreshIntervalChange,
   onThemeToggle
 }: DashboardHeaderBarProps) {
   const isDark = theme === "dark";
@@ -32,10 +46,35 @@ export function DashboardHeaderBar({
             Connito Leaderboard <span>SN{formatInteger(netuid)}</span>
           </h1>
         </div>
-        <div className="lb-header-subline">{subtitle}</div>
+        {subtitle ? <div className="lb-header-subline">{subtitle}</div> : null}
       </div>
 
       <div className="lb-header-actions">
+        <label className="lb-api-version-field" title="Select leaderboard API version">
+          <Database size={15} />
+          <select
+            value={apiVersion}
+            aria-label="Select leaderboard API version"
+            onChange={(event) => onApiVersionChange(event.target.value as LeaderboardApiVersion)}
+          >
+            <option value="v2">API v2</option>
+            <option value="v3">API v3</option>
+          </select>
+        </label>
+
+        <label className="lb-refresh-interval-field" title="Select refresh interval">
+          <Clock3 size={15} />
+          <select
+            value={refreshIntervalSeconds}
+            aria-label="Select refresh interval"
+            onChange={(event) => onRefreshIntervalChange(Number(event.target.value) as RefreshIntervalSeconds)}
+          >
+            {REFRESH_INTERVAL_OPTIONS_SECONDS.map((seconds) => (
+              <option key={seconds} value={seconds}>{seconds}s</option>
+            ))}
+          </select>
+        </label>
+
         <button
           type="button"
           className="lb-icon-button lb-header-theme-button"

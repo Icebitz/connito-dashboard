@@ -9,6 +9,7 @@ import {
   type LeaderboardApiVersion,
   type RefreshIntervalSeconds
 } from "../constants";
+import { CONNITO_LOGO_URL } from "../brand";
 import { formatInteger } from "../format";
 import type { Theme } from "../types";
 
@@ -40,13 +41,16 @@ export function DashboardHeaderBar({
 
   return (
     <div className="lb-header-top lb-panel lb-header-bar">
-      <div className="lb-brand-copy">
-        <div className="lb-brand-line">
-          <h1 className="lb-header-title">
-            Connito Leaderboard <span>SN{formatInteger(netuid)}</span>
-          </h1>
+      <div className="lb-brand">
+        <img className="lb-brand-logo" src={CONNITO_LOGO_URL} alt="Connito" />
+        <div className="lb-brand-copy">
+          <div className="lb-brand-line">
+            <h1 className="lb-header-title">
+              Connito Leaderboard <span>SN{formatInteger(netuid)}</span>
+            </h1>
+          </div>
+          {subtitle ? <div className="lb-header-subline">{subtitle}</div> : null}
         </div>
-        {subtitle ? <div className="lb-header-subline">{subtitle}</div> : null}
       </div>
 
       <div className="lb-header-actions">

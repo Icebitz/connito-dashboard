@@ -1,14 +1,25 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const SOURCE_URL = "https://dashboard-api.connito.ai/api/v2/leaderboard";
+import {
+  DEFAULT_LEADERBOARD_API_VERSION,
+  LEADERBOARD_SOURCES,
+  type LeaderboardApiVersion
+} from "../../dashboard/constants";
+
 const UPSTREAM_TIMEOUT_MS = 20_000;
 const MAX_ATTEMPTS = 2;
-const CACHE_FILE = join(process.cwd(), ".next", "cache", "connito-leaderboard-v2.json");
 const HISTORY_DIR = join(process.cwd(), ".next", "cache");
-const CURRENT_HISTORY_FILE = join(HISTORY_DIR, "leaderboard-v2.json");
 const HISTORY_ROUND_LIMIT = 8;
+
+type SourceConfig = {
+  version: LeaderboardApiVersion;
+  sourceUrl: string;
+  cacheFile: string;
+  currentHistoryFile: string;
+};
 
 type CachedLeaderboard = {
   fetchedAt: string;
@@ -22,7 +33,7 @@ type LeaderboardHistorySnapshot = {
   data: unknown;
 };
 
-let cachedLeaderboard: CachedLeaderboard | null = null;
+const cachedLeaderboards = new Map<LeaderboardApiVersion, CachedLeaderboard>();
 
 export const dynamic = "force-dynamic";
 
@@ -32,30 +43,46 @@ function noStoreHeaders() {
   };
 }
 
-async function readCache() {
-  if (cachedLeaderboard) {
-    return cachedLeaderboard;
+function getSourceConfig(version: LeaderboardApiVersion): SourceConfig {
+  return {
+    version,
+    sourceUrl: LEADERBOARD_SOURCES[version],
+    cacheFile: join(process.cwd(), ".next", "cache", `connito-leaderboard-${version}.json`),
+    currentHistoryFile: join(HISTORY_DIR, `leaderboard-${version}.json`)
+  };
+}
+
+function getRequestedVersion(request: NextRequest): LeaderboardApiVersion {
+  const version = request.nextUrl.searchParams.get("version") ?? request.nextUrl.searchParams.get("apiVersion");
+
+  return version === "v2" || version === "v3" ? version : DEFAULT_LEADERBOARD_API_VERSION;
+}
+
+async function readCache(config: SourceConfig) {
+  const memoryCache = cachedLeaderboards.get(config.version);
+  if (memoryCache) {
+    return memoryCache;
   }
 
   try {
-    const raw = await readFile(CACHE_FILE, "utf8");
+    const raw = await readFile(config.cacheFile, "utf8");
     const parsed = JSON.parse(raw) as CachedLeaderboard;
     if (parsed && typeof parsed.fetchedAt === "string" && "data" in parsed) {
-      cachedLeaderboard = parsed;
+      cachedLeaderboards.set(config.version, parsed);
     }
   } catch {
     // Cache is best-effort. Cold starts can legitimately have no cache yet.
   }
 
-  return cachedLeaderboard;
+  return cachedLeaderboards.get(config.version) ?? null;
 }
 
-async function writeCache(entry: CachedLeaderboard) {
-  cachedLeaderboard = entry;
+async function writeCache(config: SourceConfig, entry: CachedLeaderboard) {
+  cachedLeaderboards.set(config.version, entry);
 
   try {
-    await mkdir(dirname(CACHE_FILE), { recursive: true });
-    await writeFile(CACHE_FILE, JSON.stringify(entry), "utf8");
+    await mkdir(dirname(config.cacheFile), { recursive: true });
+    await writeFile(config.cacheFile, JSON.stringify(entry), "utf8");
   } catch {
     // The in-memory cache is enough for the current process if disk writes fail.
   }
@@ -127,8 +154,8 @@ function getRoundId(payload: unknown) {
   return asNumber(round?.id) ?? asNumber(round?.round_id);
 }
 
-function getHistoryFile(index: number) {
-  return join(HISTORY_DIR, `leaderboard-v2-${index}.json`);
+function getHistoryFile(config: SourceConfig, index: number) {
+  return join(HISTORY_DIR, `leaderboard-${config.version}-${index}.json`);
 }
 
 function getSnapshotKey(snapshot: Pick<LeaderboardHistorySnapshot, "roundId" | "phaseStartedAtBlock">) {
@@ -180,17 +207,17 @@ async function readHistorySnapshot(file: string) {
   }
 }
 
-async function readLeaderboardHistory() {
+async function readLeaderboardHistory(config: SourceConfig) {
   const snapshots: LeaderboardHistorySnapshot[] = [];
 
   for (let index = 1; index <= HISTORY_ROUND_LIMIT - 1; index += 1) {
-    const snapshot = await readHistorySnapshot(getHistoryFile(index));
+    const snapshot = await readHistorySnapshot(getHistoryFile(config, index));
     if (snapshot) {
       snapshots.push(snapshot);
     }
   }
 
-  const current = await readHistorySnapshot(CURRENT_HISTORY_FILE);
+  const current = await readHistorySnapshot(config.currentHistoryFile);
   if (current) {
     snapshots.push(current);
   }
@@ -222,50 +249,51 @@ function createHistorySnapshot(payload: unknown, fetchedAt: string): Leaderboard
   };
 }
 
-async function rotateLeaderboardHistory() {
-  await unlink(getHistoryFile(1)).catch(() => undefined);
+async function rotateLeaderboardHistory(config: SourceConfig) {
+  await unlink(getHistoryFile(config, 1)).catch(() => undefined);
 
   for (let index = 2; index <= HISTORY_ROUND_LIMIT - 1; index += 1) {
-    await rename(getHistoryFile(index), getHistoryFile(index - 1)).catch(() => undefined);
+    await rename(getHistoryFile(config, index), getHistoryFile(config, index - 1)).catch(() => undefined);
   }
 
-  await rename(CURRENT_HISTORY_FILE, getHistoryFile(HISTORY_ROUND_LIMIT - 1)).catch(() => undefined);
+  await rename(config.currentHistoryFile, getHistoryFile(config, HISTORY_ROUND_LIMIT - 1)).catch(() => undefined);
 }
 
-async function writeHistorySnapshot(snapshot: LeaderboardHistorySnapshot) {
+async function writeHistorySnapshot(config: SourceConfig, snapshot: LeaderboardHistorySnapshot) {
   await mkdir(HISTORY_DIR, { recursive: true });
-  await writeFile(CURRENT_HISTORY_FILE, JSON.stringify(snapshot), "utf8");
+  await writeFile(config.currentHistoryFile, JSON.stringify(snapshot), "utf8");
 }
 
-async function updateLeaderboardHistory(payload: unknown, fetchedAt: string) {
+async function updateLeaderboardHistory(config: SourceConfig, payload: unknown, fetchedAt: string) {
   if (!isDistributePhase(payload)) {
-    return readLeaderboardHistory();
+    return readLeaderboardHistory(config);
   }
 
   const incomingSnapshot = createHistorySnapshot(payload, fetchedAt);
   if (!incomingSnapshot) {
-    return readLeaderboardHistory();
+    return readLeaderboardHistory(config);
   }
 
-  const currentSnapshot = await readHistorySnapshot(CURRENT_HISTORY_FILE);
+  const currentSnapshot = await readHistorySnapshot(config.currentHistoryFile);
   if (currentSnapshot && getSnapshotKey(currentSnapshot) === getSnapshotKey(incomingSnapshot)) {
-    return readLeaderboardHistory();
+    return readLeaderboardHistory(config);
   }
 
   if (currentSnapshot) {
-    await rotateLeaderboardHistory();
+    await rotateLeaderboardHistory(config);
   }
 
-  await writeHistorySnapshot(incomingSnapshot);
-  return readLeaderboardHistory();
+  await writeHistorySnapshot(config, incomingSnapshot);
+  return readLeaderboardHistory(config);
 }
 
-function emptyLeaderboard(error: string, status?: number) {
+function emptyLeaderboard(config: SourceConfig, error: string, status?: number) {
   return NextResponse.json(
     {
       fetchedAt: new Date().toISOString(),
       ok: true,
-      source: SOURCE_URL,
+      apiVersion: config.version,
+      source: config.sourceUrl,
       data: {
         data: {
           leaderboard: [],
@@ -301,19 +329,20 @@ function emptyLeaderboard(error: string, status?: number) {
   );
 }
 
-async function fallbackResponse(error: string, status?: number) {
-  const cached = await readCache();
+async function fallbackResponse(config: SourceConfig, error: string, status?: number) {
+  const cached = await readCache(config);
   if (!cached) {
-    return emptyLeaderboard(error, status);
+    return emptyLeaderboard(config, error, status);
   }
 
-  const leaderboardHistory = getHistoryResponse(await readLeaderboardHistory());
+  const leaderboardHistory = getHistoryResponse(await readLeaderboardHistory(config));
 
   return NextResponse.json(
     {
       fetchedAt: cached.fetchedAt,
       ok: true,
-      source: SOURCE_URL,
+      apiVersion: config.version,
+      source: config.sourceUrl,
       data: cached.data,
       leaderboardHistory,
       stale: true,
@@ -326,7 +355,16 @@ async function fallbackResponse(error: string, status?: number) {
   );
 }
 
-export async function GET() {
+function getUpstreamError(body: unknown) {
+  if (!isRecord(body) || typeof body.error !== "string" || "data" in body) {
+    return null;
+  }
+
+  return body.error;
+}
+
+export async function GET(request: NextRequest) {
+  const config = getSourceConfig(getRequestedVersion(request));
   let lastError = "Unknown leaderboard fetch error.";
   let lastStatus: number | undefined;
 
@@ -334,7 +372,7 @@ export async function GET() {
     const fetchedAt = new Date().toISOString();
 
     try {
-      const response = await fetch(SOURCE_URL, {
+      const response = await fetch(config.sourceUrl, {
         cache: "no-store",
         headers: {
           accept: "application/json"
@@ -350,17 +388,25 @@ export async function GET() {
         break;
       }
 
-      await writeCache({
+      const upstreamError = getUpstreamError(body);
+      if (upstreamError) {
+        lastStatus = response.status;
+        lastError = upstreamError;
+        break;
+      }
+
+      await writeCache(config, {
         fetchedAt,
         data: body
       });
-      const leaderboardHistory = getHistoryResponse(await updateLeaderboardHistory(body, fetchedAt));
+      const leaderboardHistory = getHistoryResponse(await updateLeaderboardHistory(config, body, fetchedAt));
 
       return NextResponse.json(
         {
           fetchedAt,
           ok: true,
-          source: SOURCE_URL,
+          apiVersion: config.version,
+          source: config.sourceUrl,
           data: body,
           leaderboardHistory
         },
@@ -374,5 +420,5 @@ export async function GET() {
     }
   }
 
-  return fallbackResponse(lastError, lastStatus);
+  return fallbackResponse(config, lastError, lastStatus);
 }

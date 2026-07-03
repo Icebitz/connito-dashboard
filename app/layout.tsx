@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { CONNITO_LOGO_URL } from "./dashboard/brand";
 import "./globals.css";
+import "./leaderboard.css";
 
 export const metadata: Metadata = {
   title: "Connito Subnet 102 Leaderboard",
@@ -7,11 +9,10 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/favicon.svg",
-        type: "image/svg+xml"
+        url: CONNITO_LOGO_URL
       }
     ],
-    shortcut: "/favicon.svg"
+    shortcut: CONNITO_LOGO_URL
   }
 };
 

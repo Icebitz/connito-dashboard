@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 
+import { ROUND_TREND_SAMPLE_COUNT } from "../constants";
 import { formatInteger, formatNumber } from "../format";
 import type { HistoryPoint } from "../types";
 
@@ -38,7 +39,8 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [chartSize, setChartSize] = useState({ width: 960, height: 210 });
-  const visiblePoints = points.slice(-20);
+  const visiblePoints = points.slice(-ROUND_TREND_SAMPLE_COUNT);
+  const labelStep = visiblePoints.length <= 24 ? 1 : Math.ceil(visiblePoints.length / 10);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -164,12 +166,14 @@ export function MiniLineChart({ points }: MiniLineChartProps) {
           </>
         ) : null}
         {visiblePoints.map((point, index) => (
-          <g key={point.round}>
-            <line className="chart-tick" x1={xFor(index)} x2={xFor(index)} y1={height - padBottom} y2={height - padBottom + 5} />
-            <text x={xFor(index)} y={height - 10} textAnchor="middle">
-              {formatInteger(point.round)}
-            </text>
-          </g>
+          index % labelStep === 0 || index === visiblePoints.length - 1 ? (
+            <g key={point.round}>
+              <line className="chart-tick" x1={xFor(index)} x2={xFor(index)} y1={height - padBottom} y2={height - padBottom + 5} />
+              <text x={xFor(index)} y={height - 10} textAnchor="middle">
+                {formatInteger(point.round)}
+              </text>
+            </g>
+          ) : null
         ))}
       </svg>
     </div>

@@ -2,16 +2,14 @@
 
 Real-time dashboard for the Connito Bittensor subnet 102 leaderboard.
 
-The app is built with Next.js and reads leaderboard data through a local API route that proxies the Connito dashboard API v2 endpoint.
+The app is built with Next.js and reads leaderboard data through a local API route that proxies the Connito dashboard API v3 endpoint.
 
 ## Features
 
-- Subnet overview cards for miners, validators, phase, round, top score, and top weight.
-- Current phase panel with progress and phase block timing.
-- Upcoming phase cards.
-- Round loss chart and round health summary.
-- Weight and score bar charts.
-- Leaderboard table with v2 validator metrics grouped by validator.
+- Compact header with subnet, phase, and sync state.
+- Round details with roster progress and baseline loss trend.
+- Leaderboard table with miner detail popup.
+- Validators overview table.
 - Dark/light theme toggle persisted in local storage.
 - Best-effort local cache fallback when the upstream API is slow or unavailable.
 
@@ -28,7 +26,7 @@ The app is built with Next.js and reads leaderboard data through a local API rou
 The server route [app/api/leaderboard/route.ts](app/api/leaderboard/route.ts) fetches:
 
 ```text
-https://dashboard-api.connito.ai/api/v2/leaderboard
+https://dashboard-api.connito.ai/api/v3/leaderboard
 ```
 
 The route exposes the data to the frontend at:
@@ -40,7 +38,7 @@ The route exposes the data to the frontend at:
 The upstream response is cached in memory and, when possible, in:
 
 ```text
-.next/cache/connito-leaderboard-v2.json
+.next/cache/connito-leaderboard-v3.json
 ```
 
 This cache is a runtime fallback only. It should not be treated as source data.
@@ -96,14 +94,15 @@ Runs TypeScript without emitting files.
 ```text
 app/
   api/
-    leaderboard/route.ts       Local proxy for Connito API v2
+    leaderboard/route.ts       Local proxy for Connito API v3
   dashboard/
     components/                Dashboard UI sections
     constants.ts               Refresh interval, source URL, table dimensions
     format.ts                  Formatting helpers
     model.ts                   API response normalization
     types.ts                   Dashboard and row types
-  globals.css                  Global styles and dashboard layout
+  globals.css                  Legacy global styles and defaults
+  leaderboard.css              Compact dashboard layout and component styles
   leaderboard.tsx              Main dashboard page component
   layout.tsx                   App metadata and root layout
   page.tsx                     App entry page
@@ -114,7 +113,7 @@ public/
 
 ## Data Model Notes
 
-The v2 API includes validator-specific metrics such as:
+The v3 API includes validator-specific metrics such as:
 
 - `validator_slot`
 - `validator_status`

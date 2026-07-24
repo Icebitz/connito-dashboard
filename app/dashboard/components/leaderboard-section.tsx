@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Pin, Search, X } from "lucide-react";
+import { ArrowDownUp, ChevronLeft, ChevronRight, List, Pin, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { VALIDATOR_COLUMNS } from "../constants";
@@ -19,13 +19,14 @@ type LeaderboardSectionProps = {
   filteredRows: MinerRow[];
   query: string;
   validatorHealth: ValidatorHealth[];
+  isLoading: boolean;
   onQueryChange: (value: string) => void;
 };
 
 type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number];
 type SortOption = (typeof SORT_OPTIONS)[number];
 
-export function LeaderboardSection({ allRows, filteredRows, query, validatorHealth, onQueryChange }: LeaderboardSectionProps) {
+export function LeaderboardSection({ allRows, filteredRows, query, validatorHealth, isLoading, onQueryChange }: LeaderboardSectionProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSizeOption>(25);
   const [sortBy, setSortBy] = useState<SortOption>("rank");
@@ -94,7 +95,7 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
           </div>
 
           <small>
-            Showing {visibleStart}-{visibleEnd} of {displayRows.length}
+            {isLoading ? "Loading miners…" : `Showing ${visibleStart}-${visibleEnd} of ${displayRows.length}`}
           </small>
 
           <div className="lb-leaderboard-controls">
@@ -124,7 +125,7 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
             </label>
 
             <label className="lb-page-size-field">
-              <span>Sort</span>
+              <ArrowDownUp size={14} aria-hidden="true" />
               <select
                 aria-label="Sort leaderboard"
                 value={sortBy}
@@ -140,7 +141,7 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
             </label>
 
             <label className="lb-page-size-field">
-              <span>Rows</span>
+              <List size={14} aria-hidden="true" />
               <select
                 aria-label="Rows per page"
                 value={pageSize}
@@ -197,7 +198,7 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
             </tr>
           </thead>
           <tbody>
-            {pageRows.map((row) => (
+            {isLoading ? <LeaderboardSkeletonRows /> : pageRows.map((row) => (
               <LeaderboardRow
                 key={row.uid}
                 row={row}
@@ -206,7 +207,7 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
                 onInspectRow={() => setDetailUid(row.uid)}
               />
             ))}
-            {!displayRows.length ? (
+            {!isLoading && !displayRows.length ? (
               <tr>
                 <td colSpan={10} className="lb-empty-cell">
                   {pinnedOnly ? "No pinned miners match the current search." : "No miners match the current search."}
@@ -225,6 +226,20 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
         />
       ) : null}
     </section>
+  );
+}
+
+function LeaderboardSkeletonRows() {
+  return (
+    <>
+      {Array.from({ length: 8 }, (_, rowIndex) => (
+        <tr className="lb-table-skeleton-row" key={rowIndex} aria-hidden="true">
+          {Array.from({ length: 10 }, (_, cellIndex) => (
+            <td key={cellIndex}><i className="lb-skeleton" /></td>
+          ))}
+        </tr>
+      ))}
+    </>
   );
 }
 

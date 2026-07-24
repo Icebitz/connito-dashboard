@@ -112,8 +112,6 @@ export type DashboardModel = {
     upcoming: UpcomingPhase[];
   };
   round: {
-    id: number | null;
-    baselineLoss: number | null;
     roster: number | null;
     scored: number | null;
     pending: number | null;

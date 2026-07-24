@@ -1,36 +1,36 @@
 "use client";
 
-import { formatBlock, formatInteger, formatPercent } from "../format";
+import { formatBlock, formatBlockMinutes, formatInteger, formatPercent } from "../format";
 import type { DashboardModel } from "../types";
 
 type DashboardHeaderInfoProps = {
   phase: DashboardModel["phase"];
-  subnet: DashboardModel["subnet"];
+  isLoading: boolean;
 };
 
-export function DashboardHeaderInfo({ phase, subnet }: DashboardHeaderInfoProps) {
+export function DashboardHeaderInfo({ phase, isLoading }: DashboardHeaderInfoProps) {
+  if (isLoading) {
+    return <HeaderInfoSkeleton />;
+  }
+
   const upcoming = phase.upcoming.slice(0, 3);
   const trainProgress = Math.max(0, Math.min(100, phase.progress));
   const blocksCompleted = phase.blocksInto ?? null;
   const phaseBlockTotal = getPhaseBlockTotal(blocksCompleted, phase.blocksRemaining);
-  const validatorCount = subnet.validators ?? null;
   const currentPhaseName = formatHeading(phase.name);
   const phaseTone = getPhaseTone(phase.name);
 
   return (
     <div className="lb-header-info" aria-label="Leaderboard summary">
-      <article className="lb-card lb-header-card">
-        <div className="lb-header-stat-list">
-          <StatRow label="Miners" value={formatInteger(subnet.miners)} />
-          <StatRow label="Validators" value={formatInteger(validatorCount)} />
-        </div>
-      </article>
-
-      <article className="lb-card lb-header-card">
+      <article className="lb-card lb-header-card lb-header-card-upcoming">
+        <div className="lb-header-column-head">Cycle Details</div>
         <div className="lb-header-stat-list">
           <StatRow label="Cycle" value={`# ${formatBlock(phase.cycleIndex)}`} />
-          <StatRow label="Head Block" value={formatBlock(phase.headBlock)} />
-          <StatRow label="Blocks Remaining" value={formatBlock(phase.blocksRemaining)} />
+          <StatRow label="Round" value={formatBlock(phase.headBlock)} />
+          <StatRow
+            label="Blocks Remaining"
+            value={`${formatBlock(phase.blocksRemaining)} (${formatBlockMinutes(phase.blocksRemaining)})`}
+          />
         </div>
       </article>
 
@@ -57,7 +57,7 @@ export function DashboardHeaderInfo({ phase, subnet }: DashboardHeaderInfoProps)
             <li className="lb-header-upcoming-item" key={`${item.name}-${item.startBlock}`}>
               <span className="lb-header-upcoming-index">{`${index + 1}.`}</span>
               <span className="lb-header-upcoming-name">{item.name}</span>
-              <span className="lb-header-upcoming-block">{`#${formatBlock(item.startBlock)}`}</span>
+              <span className="lb-header-upcoming-block">{`# ${formatBlock(item.startBlock)}`}</span>
             </li>
           )) : (
             <li className="lb-header-upcoming-empty">Waiting for phase data</li>
@@ -66,6 +66,35 @@ export function DashboardHeaderInfo({ phase, subnet }: DashboardHeaderInfoProps)
       </article>
     </div>
   );
+}
+
+function HeaderInfoSkeleton() {
+  return (
+    <div className="lb-header-info" aria-busy="true" aria-label="Loading leaderboard summary">
+      <article className="lb-card lb-header-card lb-header-card-skeleton">
+        <SkeletonLine width="42%" />
+        <SkeletonLine width="52%" />
+        <SkeletonLine width="68%" />
+        <SkeletonLine width="86%" />
+      </article>
+      <article className="lb-card lb-header-card lb-header-card-current lb-header-card-skeleton">
+        <SkeletonLine width="32%" />
+        <SkeletonLine width="76%" size="large" />
+        <SkeletonLine width="100%" />
+        <SkeletonLine width="58%" />
+      </article>
+      <article className="lb-card lb-header-card lb-header-card-upcoming lb-header-card-skeleton">
+        <SkeletonLine width="58%" />
+        <SkeletonLine width="100%" />
+        <SkeletonLine width="86%" />
+        <SkeletonLine width="94%" />
+      </article>
+    </div>
+  );
+}
+
+function SkeletonLine({ width, size }: { width: string; size?: "large" }) {
+  return <span className={`lb-skeleton${size ? ` lb-skeleton-${size}` : ""}`} style={{ width }} aria-hidden="true" />;
 }
 
 function StatRow({ label, value }: { label: string; value: string }) {

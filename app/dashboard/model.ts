@@ -483,8 +483,6 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
       upcoming: upcomingPhases
     },
     round: {
-      id: asNumber(round?.id),
-      baselineLoss: asNumber(round?.baseline_loss),
       roster: roundRoster,
       scored: roundScored,
       pending: roundPending,

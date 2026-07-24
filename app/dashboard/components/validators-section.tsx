@@ -10,6 +10,7 @@ import type { MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
 type ValidatorsSectionProps = {
   rows: MinerRow[];
   validatorHealth: ValidatorHealth[];
+  isLoading: boolean;
 };
 
 type ValidatorSummaryRow = {
@@ -25,7 +26,7 @@ type ValidatorSummaryRow = {
   failed: number | null;
 };
 
-export function ValidatorsSection({ rows, validatorHealth }: ValidatorsSectionProps) {
+export function ValidatorsSection({ rows, validatorHealth, isLoading }: ValidatorsSectionProps) {
   const validatorRows = useMemo(() => {
     return VALIDATOR_COLUMNS.map((index) => buildValidatorSummary(rows, validatorHealth, index));
   }, [rows, validatorHealth]);
@@ -36,7 +37,7 @@ export function ValidatorsSection({ rows, validatorHealth }: ValidatorsSectionPr
       <div className="lb-section-top">
         <div className="lb-section-title">
           <span>Validators</span>
-          <strong>{`${liveCount} live · ${validatorRows.length} slots`}</strong>
+          <strong>{isLoading ? "Loading validator status…" : `${liveCount} live · ${validatorRows.length} slots`}</strong>
         </div>
       </div>
 
@@ -57,7 +58,7 @@ export function ValidatorsSection({ rows, validatorHealth }: ValidatorsSectionPr
             </tr>
           </thead>
           <tbody>
-            {validatorRows.map((validator) => (
+            {isLoading ? <ValidatorSkeletonRows /> : validatorRows.map((validator) => (
               <tr key={`validator-${validator.index}`}>
                 <td className="lb-validator-slot">{`V${validator.index + 1}`}</td>
                 <td className="lb-validator-name" title={validator.label}>
@@ -81,6 +82,18 @@ export function ValidatorsSection({ rows, validatorHealth }: ValidatorsSectionPr
         </table>
       </div>
     </section>
+  );
+}
+
+function ValidatorSkeletonRows() {
+  return (
+    <>
+      {Array.from({ length: VALIDATOR_COLUMNS.length }, (_, rowIndex) => (
+        <tr className="lb-table-skeleton-row" key={rowIndex} aria-hidden="true">
+          {Array.from({ length: 10 }, (_, cellIndex) => <td key={cellIndex}><i className="lb-skeleton" /></td>)}
+        </tr>
+      ))}
+    </>
   );
 }
 

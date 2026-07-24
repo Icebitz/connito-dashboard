@@ -21,6 +21,7 @@ import type { ApiResponse, Theme } from "./dashboard/types";
 
 export default function Leaderboard() {
   const [leaderboard, setLeaderboard] = useState<ApiResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [theme, setTheme] = useState<Theme>("dark");
   const [themeReady, setThemeReady] = useState(false);
@@ -45,6 +46,8 @@ export default function Leaderboard() {
       setLeaderboard(leaderboardBody);
     } catch (loadError) {
       console.error(loadError);
+    } finally {
+      setIsLoading(false);
     }
   }, [apiVersion]);
 
@@ -138,9 +141,10 @@ export default function Leaderboard() {
         apiVersion={apiVersion}
         refreshIntervalSeconds={refreshIntervalSeconds}
         phase={model.phase}
-        subnet={model.subnet}
+        isLoading={isLoading}
         onApiVersionChange={(nextApiVersion) => {
           setLeaderboard(null);
+          setIsLoading(true);
           setApiVersion(nextApiVersion);
         }}
         onRefreshIntervalChange={setRefreshIntervalSeconds}
@@ -149,9 +153,9 @@ export default function Leaderboard() {
 
       <RoundDetailsPanel
         round={model.round}
-        phase={model.phase}
         miners={model.subnet.miners}
         history={model.round.history}
+        isLoading={isLoading}
       />
 
       <LeaderboardSection
@@ -159,10 +163,11 @@ export default function Leaderboard() {
         filteredRows={filteredRows}
         query={query}
         validatorHealth={model.meta.validatorHealth}
+        isLoading={isLoading}
         onQueryChange={setQuery}
       />
 
-      <ValidatorsSection rows={model.rows} validatorHealth={model.meta.validatorHealth} />
+      <ValidatorsSection rows={model.rows} validatorHealth={model.meta.validatorHealth} isLoading={isLoading} />
     </main>
   );
 }

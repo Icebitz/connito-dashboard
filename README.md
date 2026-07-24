@@ -26,7 +26,7 @@ The app is built with Next.js and reads leaderboard data through a local API rou
 The server route [app/api/leaderboard/route.ts](app/api/leaderboard/route.ts) fetches:
 
 ```text
-https://dashboard-api.connito.ai/api/v3/leaderboard
+http://dashboard-api-v2.connito.ai/api/v2/leaderboard
 ```
 
 The route exposes the data to the frontend at:

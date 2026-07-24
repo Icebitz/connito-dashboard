@@ -56,7 +56,9 @@ export default function Leaderboard() {
 
   useEffect(() => {
     const storedApiVersion = window.localStorage.getItem(API_VERSION_STORAGE_KEY);
-    const initialApiVersion: LeaderboardApiVersion = storedApiVersion === "v2" || storedApiVersion === "v3"
+    const initialApiVersion: LeaderboardApiVersion = storedApiVersion === "v1"
+      || storedApiVersion === "v2"
+      || storedApiVersion === "v3"
       ? storedApiVersion
       : DEFAULT_LEADERBOARD_API_VERSION;
 

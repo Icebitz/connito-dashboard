@@ -61,6 +61,7 @@ export function DashboardHeaderBar({
             aria-label="Select leaderboard API version"
             onChange={(event) => onApiVersionChange(event.target.value as LeaderboardApiVersion)}
           >
+            <option value="v1">API v1</option>
             <option value="v2">API v2</option>
             <option value="v3">API v3</option>
           </select>

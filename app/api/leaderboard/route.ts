@@ -55,7 +55,9 @@ function getSourceConfig(version: LeaderboardApiVersion): SourceConfig {
 function getRequestedVersion(request: NextRequest): LeaderboardApiVersion {
   const version = request.nextUrl.searchParams.get("version") ?? request.nextUrl.searchParams.get("apiVersion");
 
-  return version === "v2" || version === "v3" ? version : DEFAULT_LEADERBOARD_API_VERSION;
+  return version === "v1" || version === "v2" || version === "v3"
+    ? version
+    : DEFAULT_LEADERBOARD_API_VERSION;
 }
 
 async function readCache(config: SourceConfig) {

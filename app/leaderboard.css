@@ -1556,6 +1556,27 @@ button:disabled {
   white-space: nowrap;
 }
 
+.lb-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: -8px;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.lb-sort-button:hover,
+.lb-sort-button:focus-visible {
+  color: var(--heading);
+  outline: none;
+}
+
 .lb-table tbody td {
   padding: 2px 4px;
   border-bottom: 1px solid var(--table-row-border);

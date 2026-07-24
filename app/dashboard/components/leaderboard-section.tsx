@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownUp, ChevronLeft, ChevronRight, List, Pin, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, List, Pin, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { VALIDATOR_COLUMNS } from "../constants";
@@ -11,7 +11,6 @@ import { CopyHotkeyButton } from "./copy-hotkey-button";
 import { MinerDetailsModal } from "./miner-details-modal";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, "all"] as const;
-const SORT_OPTIONS = ["rank", "group", "incentive"] as const;
 const PINNED_UIDS_STORAGE_KEY = "connito:pinned-uids";
 
 type LeaderboardSectionProps = {
@@ -24,12 +23,14 @@ type LeaderboardSectionProps = {
 };
 
 type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number];
-type SortOption = (typeof SORT_OPTIONS)[number];
+type SortOption = "rank" | "group" | "incentive";
+type SortDirection = "asc" | "desc";
 
 export function LeaderboardSection({ allRows, filteredRows, query, validatorHealth, isLoading, onQueryChange }: LeaderboardSectionProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSizeOption>(25);
   const [sortBy, setSortBy] = useState<SortOption>("rank");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [pinnedOnly, setPinnedOnly] = useState(false);
   const [pinnedUids, setPinnedUids] = useState<string[]>([]);
   const [pinnedUidsHydrated, setPinnedUidsHydrated] = useState(false);
@@ -40,7 +41,7 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
     () => pinnedOnly ? filteredRows.filter((row) => pinnedUidSet.has(row.uid)) : filteredRows,
     [filteredRows, pinnedOnly, pinnedUidSet]
   );
-  const sortedRows = useMemo(() => [...displayRows].sort((a, b) => compareRows(a, b, sortBy)), [displayRows, sortBy]);
+  const sortedRows = useMemo(() => [...displayRows].sort((a, b) => compareRows(a, b, sortBy, sortDirection)), [displayRows, sortBy, sortDirection]);
   const pageCount = pageSize === "all" ? 1 : Math.max(1, Math.ceil(sortedRows.length / pageSize));
   const safePage = Math.min(currentPage, pageCount);
   const pageStart = pageSize === "all" ? 0 : (safePage - 1) * pageSize;
@@ -80,7 +81,7 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, pageSize, sortBy, pinnedOnly, pinnedUids]);
+  }, [query, pageSize, sortBy, sortDirection, pinnedOnly, pinnedUids]);
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, pageCount));
@@ -122,22 +123,6 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
                   <X size={14} />
                 </button>
               ) : null}
-            </label>
-
-            <label className="lb-page-size-field">
-              <ArrowDownUp size={14} aria-hidden="true" />
-              <select
-                aria-label="Sort leaderboard"
-                value={sortBy}
-                onChange={(event) => {
-                  setSortBy(parseSortOption(event.target.value));
-                  setCurrentPage(1);
-                }}
-              >
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option} value={option}>{formatSortOption(option)}</option>
-                ))}
-              </select>
             </label>
 
             <label className="lb-page-size-field">
@@ -186,11 +171,11 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
           <thead>
             <tr>
               <th className="lb-col-pin" aria-label="Pin row" />
-              <th className="lb-col-rank">Rank</th>
+              <SortableHeader column="rank" label="Rank" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} className="lb-col-rank" />
               <th className="lb-col-uid">UID</th>
-              <th className="lb-col-group">Group</th>
+              <SortableHeader column="group" label="Group" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} className="lb-col-group" />
               <th className="lb-col-model">Miner</th>
-              <th className="lb-col-num">Incentive</th>
+              <SortableHeader column="incentive" label="Incentive" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} className="lb-col-num" />
               <th className="lb-col-trend">Trend</th>
               <th className="lb-col-commit">Commit</th>
               <th className="lb-col-validator-metrics">Validator Metrics</th>
@@ -226,6 +211,37 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
         />
       ) : null}
     </section>
+  );
+
+  function handleSort(column: SortOption) {
+    if (column === sortBy) {
+      setSortDirection((direction) => direction === "asc" ? "desc" : "asc");
+      return;
+    }
+
+    setSortBy(column);
+    setSortDirection(column === "incentive" ? "desc" : "asc");
+  }
+}
+
+function SortableHeader({ column, label, sortBy, sortDirection, onSort, className }: {
+  column: SortOption;
+  label: string;
+  sortBy: SortOption;
+  sortDirection: SortDirection;
+  onSort: (column: SortOption) => void;
+  className: string;
+}) {
+  const isActive = sortBy === column;
+  const direction = isActive ? sortDirection : undefined;
+
+  return (
+    <th className={className} aria-sort={direction === "asc" ? "ascending" : direction === "desc" ? "descending" : "none"}>
+      <button type="button" className="lb-sort-button" onClick={() => onSort(column)}>
+        {label}
+        {direction === "asc" ? <ArrowUp size={13} aria-hidden="true" /> : direction === "desc" ? <ArrowDown size={13} aria-hidden="true" /> : null}
+      </button>
+    </th>
   );
 }
 
@@ -480,14 +496,6 @@ function parsePageSizeOption(value: string): PageSizeOption {
   return PAGE_SIZE_OPTIONS.includes(numericValue as PageSizeOption) ? numericValue as PageSizeOption : 25;
 }
 
-function parseSortOption(value: string): SortOption {
-  return SORT_OPTIONS.includes(value as SortOption) ? value as SortOption : "rank";
-}
-
-function formatSortOption(option: SortOption) {
-  return option[0].toUpperCase() + option.slice(1);
-}
-
 function togglePinnedUid(pinnedUids: string[], uid: string) {
   if (pinnedUids.includes(uid)) {
     return pinnedUids.filter((pinnedUid) => pinnedUid !== uid);
@@ -496,19 +504,19 @@ function togglePinnedUid(pinnedUids: string[], uid: string) {
   return [...pinnedUids, uid];
 }
 
-function compareRows(a: MinerRow, b: MinerRow, sortBy: SortOption) {
+function compareRows(a: MinerRow, b: MinerRow, sortBy: SortOption, sortDirection: SortDirection) {
   if (sortBy === "group") {
-    return compareText(a.cohortGroup, b.cohortGroup) || a.rank - b.rank;
+    return compareText(a.cohortGroup, b.cohortGroup, sortDirection) || a.rank - b.rank;
   }
 
   if (sortBy === "incentive") {
-    return compareNullableNumberDesc(a.incentive, b.incentive) || a.rank - b.rank;
+    return compareNullableNumber(a.incentive, b.incentive, sortDirection) || a.rank - b.rank;
   }
 
-  return a.rank - b.rank;
+  return (a.rank - b.rank) * (sortDirection === "asc" ? 1 : -1);
 }
 
-function compareText(a: string | null, b: string | null) {
+function compareText(a: string | null, b: string | null, direction: SortDirection) {
   const aValue = a?.trim() || "";
   const bValue = b?.trim() || "";
 
@@ -524,10 +532,10 @@ function compareText(a: string | null, b: string | null) {
     return -1;
   }
 
-  return aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: "base" });
+  return aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: "base" }) * (direction === "asc" ? 1 : -1);
 }
 
-function compareNullableNumberDesc(a: number | null, b: number | null) {
+function compareNullableNumber(a: number | null, b: number | null, direction: SortDirection) {
   const aValid = a !== null && Number.isFinite(a);
   const bValid = b !== null && Number.isFinite(b);
 
@@ -543,7 +551,7 @@ function compareNullableNumberDesc(a: number | null, b: number | null) {
     return -1;
   }
 
-  return b - a;
+  return (a - b) * (direction === "asc" ? 1 : -1);
 }
 
 function hasMetricValue(value: number | null | undefined) {

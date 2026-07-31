@@ -31,16 +31,17 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
   const [pageSize, setPageSize] = useState<PageSizeOption>(25);
   const [sortBy, setSortBy] = useState<SortOption>("rank");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [groupedOnly, setGroupedOnly] = useState(false);
   const [pinnedOnly, setPinnedOnly] = useState(false);
   const [pinnedUids, setPinnedUids] = useState<string[]>([]);
   const [pinnedUidsHydrated, setPinnedUidsHydrated] = useState(false);
   const [detailUid, setDetailUid] = useState<string | null>(null);
 
   const pinnedUidSet = useMemo(() => new Set(pinnedUids), [pinnedUids]);
-  const displayRows = useMemo(
-    () => pinnedOnly ? filteredRows.filter((row) => pinnedUidSet.has(row.uid)) : filteredRows,
-    [filteredRows, pinnedOnly, pinnedUidSet]
-  );
+  const displayRows = useMemo(() => filteredRows.filter((row) => (
+    (!groupedOnly || Boolean(row.cohortGroup?.trim()))
+    && (!pinnedOnly || pinnedUidSet.has(row.uid))
+  )), [filteredRows, groupedOnly, pinnedOnly, pinnedUidSet]);
   const sortedRows = useMemo(() => [...displayRows].sort((a, b) => compareRows(a, b, sortBy, sortDirection)), [displayRows, sortBy, sortDirection]);
   const pageCount = pageSize === "all" ? 1 : Math.max(1, Math.ceil(sortedRows.length / pageSize));
   const safePage = Math.min(currentPage, pageCount);
@@ -81,7 +82,7 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, pageSize, sortBy, sortDirection, pinnedOnly, pinnedUids]);
+  }, [query, pageSize, sortBy, sortDirection, groupedOnly, pinnedOnly, pinnedUids]);
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, pageCount));
@@ -100,6 +101,16 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
           </small>
 
           <div className="lb-leaderboard-controls">
+            <label className="lb-pinned-only-switch">
+              <span>Grouped Only</span>
+              <input
+                type="checkbox"
+                checked={groupedOnly}
+                onChange={(event) => setGroupedOnly(event.target.checked)}
+              />
+              <i aria-hidden="true" />
+            </label>
+
             <label className="lb-pinned-only-switch">
               <span>Pinned Only</span>
               <input
@@ -195,7 +206,13 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
             {!isLoading && !displayRows.length ? (
               <tr>
                 <td colSpan={10} className="lb-empty-cell">
-                  {pinnedOnly ? "No pinned miners match the current search." : "No miners match the current search."}
+                  {pinnedOnly && groupedOnly
+                    ? "No grouped pinned miners match the current search."
+                    : pinnedOnly
+                      ? "No pinned miners match the current search."
+                      : groupedOnly
+                        ? "No grouped miners match the current search."
+                        : "No miners match the current search."}
                 </td>
               </tr>
             ) : null}

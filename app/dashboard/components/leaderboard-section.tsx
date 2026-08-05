@@ -396,12 +396,6 @@ function TrendSparkline({ values }: { values: Array<number | null> }) {
 
           return (
             <g key={`sparkline-segment-${segmentIndex}`}>
-              {segment.length > 1 ? (
-                <path
-                  className="lb-sparkline-area"
-                  d={`${path} L ${segment[segment.length - 1].x} ${height - paddingY} L ${segment[0].x} ${height - paddingY} Z`}
-                />
-              ) : null}
               <path className="lb-sparkline-line" d={path} />
               {segment.map((point, pointIndex) => (
                 <circle

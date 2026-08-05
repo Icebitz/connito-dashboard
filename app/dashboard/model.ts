@@ -64,6 +64,10 @@ function asNumberArray(value: unknown) {
     : [];
 }
 
+function asNullableNumberArray(value: unknown): Array<number | null> {
+  return Array.isArray(value) ? value.map(asNumber) : [];
+}
+
 function createEmptyValidatorHealth(slot: number): ValidatorHealth {
   return {
     slot,
@@ -278,7 +282,7 @@ function getLeaderboardRows(data: Record<string, unknown>): MinerRow[] {
         loss: asNumber(row.val_loss) ?? asNumber(row.loss) ?? asNumber(row.validation_loss),
         deltaLoss: asNumber(row.delta_loss) ?? asNumber(row.loss_delta) ?? asNumber(row.deltaLoss),
         incentive: asNumber(row.incentive),
-        lossTrend: asNumberArray(row.loss_trend),
+        lossTrend: asNullableNumberArray(row.loss_trend),
         weight: asNumber(row.chain_weight_stake_weighted) ?? asNumber(row.weight_submitted),
         validatorMetrics
       };

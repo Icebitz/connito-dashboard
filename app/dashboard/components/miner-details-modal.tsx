@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 
 import { LEADERBOARD_VALIDATOR_SLOTS } from "../constants";
-import { formatAgeSecondsShort, formatInteger, formatMetricNumber, shortText } from "../format";
+import { formatAgeSecondsShort, formatInteger, formatMetricNumber, getHuggingFaceRepoUrl, shortText } from "../format";
 import { formatStatusLabel, statusTone } from "../status";
 import type { MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
 import { CopyHotkeyButton } from "./copy-hotkey-button";
@@ -45,7 +45,10 @@ export function MinerDetailsModal({ row, validatorHealth, onClose }: MinerDetail
   );
 
   const statusLabel = getRowStatusLabel(row);
-  const commitmentLabel = row.committedRecently || row.committedThisCycle ? "Committed" : "Not committed";
+  const commitLabel = getCommitLabel(row);
+  const groupLabel = row.cohortGroup?.trim() || "-";
+  const groupClassName = getGroupClassName(groupLabel);
+  const repoUrl = getHuggingFaceRepoUrl(row.repo);
 
   return (
     <div
@@ -69,13 +72,20 @@ export function MinerDetailsModal({ row, validatorHealth, onClose }: MinerDetail
             <div className="lb-modal-title-row">
               <h2 id="miner-details-title">UID {row.uid}</h2>
               <div className="lb-modal-badges">
+                <span className="lb-pill lb-pill-neutral">Rank #{formatInteger(row.rank)}</span>
                 <span className={`lb-pill lb-pill-${statusTone(statusLabel)}`}>{statusLabel}</span>
-                <span className="lb-pill lb-pill-neutral">{commitmentLabel}</span>
-                <span className="lb-pill lb-pill-neutral">Group {row.cohortGroup ?? "-"}</span>
+                <span className={`lb-pill lb-pill-${getCommitTone(commitLabel)}`}>{commitLabel}</span>
+                <span className={`lb-pill lb-pill-neutral lb-group-pill${groupClassName ? ` ${groupClassName}` : ""}`}>Group {groupLabel}</span>
               </div>
             </div>
             <div className="lb-modal-meta" id="miner-details-description">
               <span>Hotkey &nbsp;<CopyHotkeyButton value={row.hotkey} className="lb-copy-button lb-copy-button-inline" start={10} end={7} /></span>
+              <span>
+                HF Repo&nbsp;
+                {repoUrl ? (
+                  <a href={repoUrl} target="_blank" rel="noreferrer" title={row.repo}>{shortText(row.repo, 20, 8)}</a>
+                ) : "-"}
+              </span>
               <span>Revision {shortText(row.revision, 14, 8)}</span>
               <span>Last Commit Block {formatInteger(row.lastObservedCommitBlock)}</span>
               <span>Lag {formatInteger(row.lastObservedCommitBlockLag)}</span>
@@ -452,5 +462,59 @@ function getRowStatusLabel(row: MinerRow) {
     return "Pending";
   }
 
-  return "OK";
+  return "Weighted";
+}
+
+function getCommitLabel(row: MinerRow) {
+  if (row.committedRecently || row.committedThisCycle) {
+    return "Fresh";
+  }
+
+  if (row.lastObservedCommitBlockLag !== null) {
+    return "Lag";
+  }
+
+  return "Pending";
+}
+
+function getCommitTone(label: string) {
+  if (label === "Fresh") {
+    return "green";
+  }
+
+  if (label === "Lag") {
+    return "violet";
+  }
+
+  return "amber";
+}
+
+function getGroupClassName(group: string) {
+  const normalized = group.trim().toUpperCase();
+
+  if (!normalized || normalized === "-") {
+    return "";
+  }
+
+  if (normalized === "A") {
+    return "lb-group-pill-a";
+  }
+
+  if (normalized === "B") {
+    return "lb-group-pill-b";
+  }
+
+  if (normalized === "C") {
+    return "lb-group-pill-c";
+  }
+
+  if (normalized === "D") {
+    return "lb-group-pill-d";
+  }
+
+  if (normalized === "E") {
+    return "lb-group-pill-e";
+  }
+
+  return "lb-group-pill-generic";
 }

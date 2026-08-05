@@ -592,7 +592,7 @@ function getRowStatusLabel(row: MinerRow) {
     return "Pending";
   }
 
-  return "OK";
+  return "Weighted";
 }
 
 function getCommitLabel(row: MinerRow) {

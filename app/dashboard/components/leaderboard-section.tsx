@@ -10,7 +10,7 @@ import type { MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
 import { CopyHotkeyButton } from "./copy-hotkey-button";
 import { MinerDetailsModal } from "./miner-details-modal";
 
-const PAGE_SIZE_OPTIONS = [25, 50, 100, "all"] as const;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, "all"] as const;
 const PINNED_UIDS_STORAGE_KEY = "connito:pinned-uids";
 
 type LeaderboardSectionProps = {
@@ -28,7 +28,7 @@ type SortDirection = "asc" | "desc";
 
 export function LeaderboardSection({ allRows, filteredRows, query, validatorHealth, isLoading, onQueryChange }: LeaderboardSectionProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState<PageSizeOption>(25);
+  const [pageSize, setPageSize] = useState<PageSizeOption>(10);
   const [sortBy, setSortBy] = useState<SortOption>("rank");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [groupedOnly, setGroupedOnly] = useState(false);
@@ -514,7 +514,7 @@ function parsePageSizeOption(value: string): PageSizeOption {
   }
 
   const numericValue = Number(value);
-  return PAGE_SIZE_OPTIONS.includes(numericValue as PageSizeOption) ? numericValue as PageSizeOption : 25;
+  return PAGE_SIZE_OPTIONS.includes(numericValue as PageSizeOption) ? numericValue as PageSizeOption : 10;
 }
 
 function togglePinnedUid(pinnedUids: string[], uid: string) {

@@ -1563,6 +1563,21 @@ button:disabled {
   white-space: nowrap;
 }
 
+.lb-table thead .lb-col-rank,
+.lb-table thead .lb-col-num {
+  text-align: right;
+}
+
+.lb-table thead .lb-col-uid,
+.lb-table thead .lb-col-group,
+.lb-table thead .lb-col-trend {
+  text-align: center;
+}
+
+.lb-table thead .lb-col-model {
+  text-align: left;
+}
+
 .lb-sort-button {
   display: inline-flex;
   align-items: center;

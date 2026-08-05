@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { VALIDATOR_COLUMNS } from "../constants";
+import { LEADERBOARD_VALIDATOR_SLOTS } from "../constants";
 import { formatAgeSecondsShort, formatInteger, shortText } from "../format";
 import { formatStatusLabel, statusTone } from "../status";
 import type { MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
@@ -14,7 +14,7 @@ type ValidatorsSectionProps = {
 };
 
 type ValidatorSummaryRow = {
-  index: number;
+  slot: number;
   label: string;
   hotkey: string;
   status: string;
@@ -28,7 +28,7 @@ type ValidatorSummaryRow = {
 
 export function ValidatorsSection({ rows, validatorHealth, isLoading }: ValidatorsSectionProps) {
   const validatorRows = useMemo(() => {
-    return VALIDATOR_COLUMNS.map((index) => buildValidatorSummary(rows, validatorHealth, index));
+    return LEADERBOARD_VALIDATOR_SLOTS.map((slot, index) => buildValidatorSummary(rows, validatorHealth, slot, index));
   }, [rows, validatorHealth]);
   const liveCount = validatorRows.filter((row) => row.status.trim().toLowerCase() === "live").length;
 
@@ -59,8 +59,8 @@ export function ValidatorsSection({ rows, validatorHealth, isLoading }: Validato
           </thead>
           <tbody>
             {isLoading ? <ValidatorSkeletonRows /> : validatorRows.map((validator) => (
-              <tr key={`validator-${validator.index}`}>
-                <td className="lb-validator-slot">{`V${validator.index + 1}`}</td>
+              <tr key={`validator-${validator.slot}`}>
+                <td className="lb-validator-slot">{`V${validator.slot}`}</td>
                 <td className="lb-validator-name" title={validator.label}>
                   {validator.label}
                 </td>
@@ -88,7 +88,7 @@ export function ValidatorsSection({ rows, validatorHealth, isLoading }: Validato
 function ValidatorSkeletonRows() {
   return (
     <>
-      {Array.from({ length: VALIDATOR_COLUMNS.length }, (_, rowIndex) => (
+      {Array.from({ length: LEADERBOARD_VALIDATOR_SLOTS.length }, (_, rowIndex) => (
         <tr className="lb-table-skeleton-row" key={rowIndex} aria-hidden="true">
           {Array.from({ length: 10 }, (_, cellIndex) => <td key={cellIndex}><i className="lb-skeleton" /></td>)}
         </tr>
@@ -97,10 +97,10 @@ function ValidatorSkeletonRows() {
   );
 }
 
-function buildValidatorSummary(rows: MinerRow[], validatorHealth: ValidatorHealth[], index: number): ValidatorSummaryRow {
-  const health = validatorHealth.find((validator) => validator.slot === index + 1);
+function buildValidatorSummary(rows: MinerRow[], validatorHealth: ValidatorHealth[], slot: number, fallbackIndex: number): ValidatorSummaryRow {
+  const health = validatorHealth.find((validator) => validator.slot === slot);
   const metrics = rows
-    .map((row) => getValidatorMetricForColumn(row, index))
+    .map((row) => getValidatorMetricForSlot(row, slot, fallbackIndex))
     .filter((metric): metric is ValidatorMetric => Boolean(metric));
 
   const scored = metrics.filter((metric) => hasMetricValue(metric.scoreLatest) || hasMetricValue(metric.score) || hasMetricValue(metric.scoreAverage) || hasMetricValue(metric.valLoss)).length;
@@ -110,8 +110,8 @@ function buildValidatorSummary(rows: MinerRow[], validatorHealth: ValidatorHealt
   const hasMetrics = metrics.length > 0;
 
   return {
-    index,
-    label: health?.label ?? fallbackMetric?.label ?? `Validator ${index + 1}`,
+    slot,
+    label: health?.label ?? fallbackMetric?.label ?? `Validator ${slot}`,
     hotkey: health?.hotkey ?? fallbackMetric?.hotkey ?? "-",
     status: normalizeStatus(health?.status ?? deriveValidatorStatus(health, metrics)),
     chainActive: health?.chainActive ?? null,
@@ -123,9 +123,9 @@ function buildValidatorSummary(rows: MinerRow[], validatorHealth: ValidatorHealt
   };
 }
 
-function getValidatorMetricForColumn(row: MinerRow, index: number) {
+function getValidatorMetricForSlot(row: MinerRow, slot: number, fallbackIndex: number) {
   const hasSlots = row.validatorMetrics.some((metric) => metric.slot !== null);
-  return hasSlots ? row.validatorMetrics.find((metric) => metric.slot === index + 1) : row.validatorMetrics[index];
+  return hasSlots ? row.validatorMetrics.find((metric) => metric.slot === slot) : row.validatorMetrics[fallbackIndex];
 }
 
 function hasMetricValue(value: number | null | undefined) {

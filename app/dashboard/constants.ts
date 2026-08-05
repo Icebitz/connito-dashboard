@@ -19,3 +19,4 @@ export const API_VERSION_STORAGE_KEY = "connito-dashboard-api-version";
 export const REFRESH_INTERVAL_STORAGE_KEY = "connito-dashboard-refresh-interval";
 export const VALIDATOR_COLUMN_COUNT = 5;
 export const VALIDATOR_COLUMNS = Array.from({ length: VALIDATOR_COLUMN_COUNT }, (_, index) => index);
+export const LEADERBOARD_VALIDATOR_SLOTS = [2, 5] as const;

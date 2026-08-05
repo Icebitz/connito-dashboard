@@ -1682,7 +1682,7 @@ button:disabled {
 }
 
 .lb-col-trend {
-  width: 90px;
+  width: 180px;
 }
 
 .lb-col-commit {
@@ -1690,7 +1690,7 @@ button:disabled {
 }
 
 .lb-col-validator-metrics {
-  width: 980px;
+  width: 400px;
 }
 
 .lb-col-status {
@@ -1786,7 +1786,7 @@ button:disabled {
 
 .lb-validator-metrics {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   width: 100%;
 }
@@ -1860,7 +1860,7 @@ button:disabled {
 .lb-sparkline {
   display: block;
   width: 100%;
-  min-width: 96px;
+  min-width: 160px;
   height: 24px;
 }
 

@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 
-import { VALIDATOR_COLUMNS } from "../constants";
+import { LEADERBOARD_VALIDATOR_SLOTS } from "../constants";
 import { formatAgeSecondsShort, formatInteger, formatMetricNumber, shortText } from "../format";
 import { formatStatusLabel, statusTone } from "../status";
 import type { MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
@@ -36,10 +36,10 @@ export function MinerDetailsModal({ row, validatorHealth, onClose }: MinerDetail
   }, [onClose]);
 
   const validatorRows = useMemo(
-    () => VALIDATOR_COLUMNS.map((index) => ({
-      index,
-      metric: getValidatorMetricForColumn(row, index),
-      health: getValidatorHealthForSlot(validatorHealth, index)
+    () => LEADERBOARD_VALIDATOR_SLOTS.map((slot, index) => ({
+      slot,
+      metric: getValidatorMetricForSlot(row, slot, index),
+      health: getValidatorHealthForSlot(validatorHealth, slot)
     })),
     [row, validatorHealth]
   );
@@ -121,9 +121,9 @@ export function MinerDetailsModal({ row, validatorHealth, onClose }: MinerDetail
                   </tr>
                 </thead>
                 <tbody>
-                  {validatorRows.map(({ index, metric, health }) => (
-                    <tr key={`${row.uid}-validator-${index}`}>
-                      <td>{`V${index + 1}`}</td>
+                  {validatorRows.map(({ slot, metric, health }) => (
+                    <tr key={`${row.uid}-validator-${slot}`}>
+                      <td>{`V${slot}`}</td>
                       <td>{formatAssignmentRole(metric?.assignmentRole)}</td>
                       <td>
                         <span className={`lb-pill lb-pill-${statusTone(metric?.evalStatusLabel ?? health?.status)}`}>
@@ -418,13 +418,13 @@ function getAverageValidatorLoss(row: MinerRow) {
   return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
 }
 
-function getValidatorMetricForColumn(row: MinerRow, index: number) {
+function getValidatorMetricForSlot(row: MinerRow, slot: number, fallbackIndex: number) {
   const hasSlots = row.validatorMetrics.some((metric) => metric.slot !== null);
-  return hasSlots ? row.validatorMetrics.find((metric) => metric.slot === index + 1) : row.validatorMetrics[index];
+  return hasSlots ? row.validatorMetrics.find((metric) => metric.slot === slot) : row.validatorMetrics[fallbackIndex];
 }
 
-function getValidatorHealthForSlot(validatorHealth: ValidatorHealth[], index: number) {
-  return validatorHealth.find((validator) => validator.slot === index + 1);
+function getValidatorHealthForSlot(validatorHealth: ValidatorHealth[], slot: number) {
+  return validatorHealth.find((validator) => validator.slot === slot);
 }
 
 function formatAssignmentRole(role: string | null | undefined) {

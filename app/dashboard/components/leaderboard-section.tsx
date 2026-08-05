@@ -3,7 +3,7 @@
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, List, Pin, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { VALIDATOR_COLUMNS } from "../constants";
+import { LEADERBOARD_VALIDATOR_SLOTS } from "../constants";
 import { formatInteger, formatMetricNumber, formatRepoRevision, getHuggingFaceRepoUrl, shortText } from "../format";
 import { statusTone } from "../status";
 import type { MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
@@ -189,7 +189,7 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
               <SortableHeader column="incentive" label="Incentive" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} className="lb-col-num" />
               <th className="lb-col-trend">Trend</th>
               <th className="lb-col-commit">Commit</th>
-              <th className="lb-col-validator-metrics">Validator Metrics</th>
+              <th className="lb-col-validator-metrics">Validator Metrics (V2, V5)</th>
               <th className="lb-col-status">Status</th>
             </tr>
           </thead>
@@ -375,7 +375,7 @@ function TrendSparkline({ values }: { values: Array<number | null> }) {
     return <span className="lb-sparkline-empty">-</span>;
   }
 
-  const width = 120;
+  const width = 160;
   const height = 24;
   const paddingX = 4;
   const paddingY = 4;
@@ -466,11 +466,15 @@ function buildSparklinePath(points: SparklinePoint[]) {
 }
 
 function ValidatorMetricSummary({ metrics }: { metrics: ValidatorMetric[] }) {
-  const slotMetrics = VALIDATOR_COLUMNS.map((index) => getValidatorMetricForColumn(metrics, index));
+  const hasSlots = metrics.some((metric) => metric.slot !== null);
+  const slotMetrics = LEADERBOARD_VALIDATOR_SLOTS.map((slot, index) => ({
+    slot,
+    metric: hasSlots ? metrics.find((metric) => metric.slot === slot) ?? null : metrics[index] ?? null
+  }));
 
   return (
-    <div className="lb-validator-metrics" aria-label="Validator metrics">
-      {slotMetrics.map((metric, index) => {
+    <div className="lb-validator-metrics" aria-label="Validator metrics for V2 and V5">
+      {slotMetrics.map(({ slot, metric }) => {
         const lossLabel = formatMetricNumber(metric?.valLoss, 4);
         const weightLabel = formatMetricNumber(metric?.weightSubmitted, 4);
         const rankLabel = metric && metric.rank !== null ? `#${formatInteger(metric.rank)}` : "-";
@@ -481,10 +485,10 @@ function ValidatorMetricSummary({ metrics }: { metrics: ValidatorMetric[] }) {
         const hasData = Boolean(metric && (hasMetricValue(metric.valLoss) || hasMetricValue(metric.weightSubmitted) || metric.rank !== null));
         const title = metric
           ? `${metric.label}: loss ${lossLabel}, weight ${weightLabel}, rank ${rankDetail}`
-          : `Validator ${index + 1}: no data`;
+          : `Validator ${slot}: no data`;
 
         return (
-          <div key={`validator-metric-${index}`} className={`lb-validator-metric${hasData ? "" : " lb-validator-metric-empty"}`} title={title}>
+          <div key={`validator-metric-${slot}`} className={`lb-validator-metric${hasData ? "" : " lb-validator-metric-empty"}`} title={title}>
             <span className="lb-validator-metric-item">
               <em className="lb-validator-metric-key">L</em>
               <strong className={`lb-validator-metric-value${lossValid ? " lb-validator-metric-value-loss" : ""}`}>{lossLabel}</strong>
@@ -643,11 +647,6 @@ function getGroupClassName(group: string) {
   }
 
   return "lb-group-pill-generic";
-}
-
-function getValidatorMetricForColumn(metrics: ValidatorMetric[], index: number) {
-  const hasSlots = metrics.some((metric) => metric.slot !== null);
-  return hasSlots ? metrics.find((metric) => metric.slot === index + 1) ?? null : metrics[index] ?? null;
 }
 
 function formatValidatorRank(metric: ValidatorMetric | null) {

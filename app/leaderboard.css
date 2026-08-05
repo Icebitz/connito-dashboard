@@ -265,11 +265,14 @@ button:disabled {
 
 .lb-shell {
   --lb-shell-pad: 12px;
+  --lb-shell-max-width: 1600px;
   --lb-header-bar-space: 72px;
   width: 100%;
+  max-width: var(--lb-shell-max-width);
   min-height: 100vh;
   display: grid;
   gap: 12px;
+  margin-inline: auto;
   padding: var(--lb-shell-pad);
 }
 
@@ -485,8 +488,12 @@ button:disabled {
 .lb-header-bar {
   position: fixed;
   top: 0;
-  left: var(--lb-shell-pad);
-  right: var(--lb-shell-pad);
+  left: 50%;
+  width: min(
+    calc(100% - var(--lb-shell-pad) - var(--lb-shell-pad)),
+    calc(var(--lb-shell-max-width) - var(--lb-shell-pad) - var(--lb-shell-pad))
+  );
+  transform: translateX(-50%);
   z-index: 30;
   min-height: 42px;
   min-width: 0;

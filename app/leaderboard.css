@@ -1726,6 +1726,13 @@ button:disabled {
   white-space: nowrap;
 }
 
+.lb-table tbody .lb-col-scored-age {
+  font-family: var(--number-font);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-synthesis: none;
+}
+
 .lb-model-copy {
   min-width: 0;
   display: grid;

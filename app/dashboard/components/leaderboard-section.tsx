@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, List, Pin, Search, X } f
 import { useEffect, useMemo, useState } from "react";
 
 import { LEADERBOARD_VALIDATOR_SLOTS } from "../constants";
-import { formatInteger, formatMetricNumber, formatRepoRevision, getHuggingFaceRepoUrl, shortText } from "../format";
+import { formatAgeSecondsShort, formatInteger, formatMetricNumber, formatRepoRevision, getHuggingFaceRepoUrl, shortText } from "../format";
 import { statusTone } from "../status";
 import type { MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
 import { CopyHotkeyButton } from "./copy-hotkey-button";
@@ -191,6 +191,7 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
               <th className="lb-col-commit">Commit</th>
               <th className="lb-col-validator-metrics">Validator Metrics (V2, V5)</th>
               <th className="lb-col-status">Status</th>
+              <th className="lb-col-scored-age">Scored Age</th>
             </tr>
           </thead>
           <tbody>
@@ -267,7 +268,7 @@ function LeaderboardSkeletonRows() {
     <>
       {Array.from({ length: 8 }, (_, rowIndex) => (
         <tr className="lb-table-skeleton-row" key={rowIndex} aria-hidden="true">
-          {Array.from({ length: 10 }, (_, cellIndex) => (
+          {Array.from({ length: 11 }, (_, cellIndex) => (
             <td key={cellIndex}><i className="lb-skeleton" /></td>
           ))}
         </tr>
@@ -363,6 +364,7 @@ function LeaderboardRow({
       <td className="lb-col-status">
         <span className={`lb-pill lb-pill-${statusTone(statusLabel)}`}>{statusLabel}</span>
       </td>
+      <td className="lb-col-scored-age">{formatAgeSecondsShort(row.scoreLatestAgeSeconds)}</td>
     </tr>
   );
 }
@@ -472,13 +474,14 @@ function ValidatorMetricSummary({ metrics }: { metrics: ValidatorMetric[] }) {
         const lossLabel = formatMetricNumber(metric?.valLoss, 4);
         const weightLabel = formatMetricNumber(metric?.weightSubmitted, 4);
         const rankLabel = metric && metric.rank !== null ? `#${formatInteger(metric.rank)}` : "-";
+        const scoredThisCycle = metric?.scoredWithinCyclePeriod === true;
         const rankDetail = formatValidatorRank(metric);
-        const lossValid = hasMetricValue(metric?.valLoss);
+        const lossValid = hasMetricValue(metric?.valLoss) && scoredThisCycle;
         const weightValid = hasMetricValue(metric?.weightSubmitted);
         const rankValid = metric?.rank !== null && metric?.rank !== undefined;
         const hasData = Boolean(metric && (hasMetricValue(metric.valLoss) || hasMetricValue(metric.weightSubmitted) || metric.rank !== null));
         const title = metric
-          ? `${metric.label}: loss ${lossLabel}, weight ${weightLabel}, rank ${rankDetail}`
+          ? `${metric.label}: loss ${lossLabel} (${scoredThisCycle ? "scored within one cycle period" : "older than one cycle period"}), weight ${weightLabel}, rank ${rankDetail}`
           : `Validator ${slot}: no data`;
 
         return (

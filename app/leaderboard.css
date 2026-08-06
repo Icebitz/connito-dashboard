@@ -1564,7 +1564,8 @@ button:disabled {
 }
 
 .lb-table thead .lb-col-rank,
-.lb-table thead .lb-col-num {
+.lb-table thead .lb-col-num,
+.lb-table thead .lb-col-scored-age {
   text-align: right;
 }
 
@@ -1704,7 +1705,7 @@ button:disabled {
 }
 
 .lb-col-trend {
-  width: 180px;
+  width: 100px;
 }
 
 .lb-col-commit {
@@ -1717,6 +1718,12 @@ button:disabled {
 
 .lb-col-status {
   width: 70px;
+}
+
+.lb-col-scored-age {
+  width: 88px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .lb-model-copy {
@@ -1882,7 +1889,7 @@ button:disabled {
 .lb-sparkline {
   display: block;
   width: 100%;
-  min-width: 160px;
+  min-width: 90px;
   height: 24px;
 }
 

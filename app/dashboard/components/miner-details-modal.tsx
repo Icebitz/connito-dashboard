@@ -248,12 +248,6 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
   }
 
   const linePaths = segments.map((segment) => segment.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" "));
-  const firstPoint = points.find((point) => point.value !== null);
-  const lastPoint = [...points].reverse().find((point) => point.value !== null);
-  const lineEndX = lastPoint ? xFor(lastPoint.index).toFixed(2) : xFor(0).toFixed(2);
-  const area = hasValidPoints && firstPoint && lastPoint && linePaths.length > 0
-    ? `${linePaths[0]} L ${lineEndX} ${height - padBottom} L ${firstPoint ? xFor(firstPoint.index).toFixed(2) : xFor(0).toFixed(2)} ${height - padBottom} Z`
-    : "";
   const hoveredPoint = hoveredIndex === null ? null : points[hoveredIndex] ?? null;
   const hoveredX = hoveredPoint ? xFor(hoveredPoint.index) : null;
   const hoveredY = hoveredPoint ? (hoveredPoint.value === null ? height - padBottom : yFor(hoveredPoint.value)) : null;
@@ -303,7 +297,6 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
             : null}
         </g>
         <line className="lb-loss-chart-baseline" x1={padLeft} x2={width - padRight} y1={height - padBottom} y2={height - padBottom} />
-        {area ? <path className="lb-loss-chart-area" d={area} /> : null}
         {linePaths.map((d, index) => <path key={`line-${index}`} className="lb-loss-chart-line" d={d} />)}
         {points.map((point) => {
           if (point.value === null) {

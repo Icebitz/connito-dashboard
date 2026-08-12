@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 
 import { LEADERBOARD_VALIDATOR_SLOTS } from "../constants";
-import { formatAgeSecondsShort, formatInteger, formatMetricNumber, getHuggingFaceRepoUrl, shortText } from "../format";
+import { formatAgeSecondsShort, formatInteger, formatMetricNumber, getHuggingFaceRevisionUrl, shortText } from "../format";
 import { formatStatusLabel, statusTone } from "../status";
 import type { MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
 import { CopyHotkeyButton } from "./copy-hotkey-button";
@@ -48,7 +48,10 @@ export function MinerDetailsModal({ row, validatorHealth, onClose }: MinerDetail
   const commitLabel = getCommitLabel(row);
   const groupLabel = row.cohortGroup?.trim() || "-";
   const groupClassName = getGroupClassName(groupLabel);
-  const repoUrl = getHuggingFaceRepoUrl(row.repo);
+  const repoRevisionUrl = getHuggingFaceRevisionUrl(row.repo, row.revision);
+  const repoRevisionLabel = row.repo && row.repo !== "-" && row.revision && row.revision !== "-"
+    ? `${row.repo}@${row.revision}`
+    : row.repo;
 
   return (
     <div
@@ -77,18 +80,19 @@ export function MinerDetailsModal({ row, validatorHealth, onClose }: MinerDetail
                 <span className={`lb-pill lb-pill-${getCommitTone(commitLabel)}`}>{commitLabel}</span>
                 <span className={`lb-pill lb-pill-neutral lb-group-pill${groupClassName ? ` ${groupClassName}` : ""}`}>Group {groupLabel}</span>
               </div>
-            </div>
-            <div className="lb-modal-meta" id="miner-details-description">
-              <span>Hotkey &nbsp;<CopyHotkeyButton value={row.hotkey} className="lb-copy-button lb-copy-button-inline" start={10} end={7} /></span>
-              <span>
-                HF Repo&nbsp;
-                {repoUrl ? (
-                  <a href={repoUrl} target="_blank" rel="noreferrer" title={row.repo}>{shortText(row.repo, 20, 8)}</a>
-                ) : "-"}
-              </span>
-              <span>Revision {shortText(row.revision, 14, 8)}</span>
-              <span>Last Commit Block {formatInteger(row.lastObservedCommitBlock)}</span>
-              <span>Lag {formatInteger(row.lastObservedCommitBlockLag)}</span>
+              <div className="lb-modal-meta" id="miner-details-description">
+                <span>Hotkey&nbsp;<CopyHotkeyButton value={row.hotkey} className="lb-copy-button lb-copy-button-inline" start={10} end={7} /></span>
+                <span>
+                  HF&nbsp;
+                  {repoRevisionUrl ? (
+                    <a href={repoRevisionUrl} target="_blank" rel="noreferrer" title={repoRevisionLabel}>
+                      {shortText(repoRevisionLabel, 20, 8)}
+                    </a>
+                  ) : (
+                    shortText(repoRevisionLabel, 20, 8)
+                  )}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -171,7 +175,8 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [chartSize, setChartSize] = useState({ width: 960, height: 180 });
-  const points = values.map((value, index) => ({
+  const trimmedValues = trimTrailingNullValues(values);
+  const points = trimmedValues.map((value, index) => ({
     index,
     value: value !== null && value !== undefined && Number.isFinite(value) ? value : null
   }));
@@ -208,9 +213,9 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
 
     observer.observe(svg);
     return () => observer.disconnect();
-  }, [values.length]);
+  }, [trimmedValues.length]);
 
-  if (!values.length) {
+  if (!trimmedValues.length) {
     return <div className="lb-empty-state">No loss trend data</div>;
   }
 
@@ -226,7 +231,7 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
   const range = max - min || 1;
   const graphWidth = width - padLeft - padRight;
   const graphHeight = height - padTop - padBottom;
-  const xFor = (index: number) => padLeft + graphWidth * (index / Math.max(1, values.length - 1));
+  const xFor = (index: number) => padLeft + graphWidth * (index / Math.max(1, trimmedValues.length - 1));
   const yFor = (value: number) => padTop + ((max - value) / range) * graphHeight;
   const segments: Array<Array<{ x: number; y: number }>> = [];
   let currentSegment: Array<{ x: number; y: number }> = [];
@@ -255,13 +260,13 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
   const tooltipHeight = 52;
   const hoveredTooltipX = hoveredX === null ? null : Math.max(10, Math.min(width - tooltipWidth - 10, hoveredX + 12));
   const hoveredTooltipY = hoveredY === null ? null : Math.max(10, Math.min(height - tooltipHeight - 10, hoveredY - 40));
-  const latest = rowLikeLatest(series, values);
+  const latest = rowLikeLatest(series, trimmedValues);
 
   const updateHover = (event: MouseEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const relativeX = ((event.clientX - rect.left) / rect.width) * width;
-    const index = Math.round(((relativeX - padLeft) / graphWidth) * (values.length - 1));
-    setHoveredIndex(Math.max(0, Math.min(values.length - 1, index)));
+    const index = Math.round(((relativeX - padLeft) / graphWidth) * (trimmedValues.length - 1));
+    setHoveredIndex(Math.max(0, Math.min(trimmedValues.length - 1, index)));
   };
 
   return (
@@ -346,14 +351,30 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
         ) : null}
       </svg>
       <div className="lb-loss-chart-footnote">
-        <span>First {formatMetricNumber(firstValue(values), 4)}</span>
-        <span>Latest {formatMetricNumber(lastValue(values), 4)}</span>
-        <span>Best {formatMetricNumber(bestValue(values), 4)}</span>
-        <span>Worst {formatMetricNumber(worstValue(values), 4)}</span>
-        <span>Δ {formatMetricNumber(deltaValue(values), 4)}</span>
+        <span>First {formatMetricNumber(firstValue(trimmedValues), 4)}</span>
+        <span>Latest {formatMetricNumber(lastValue(trimmedValues), 4)}</span>
+        <span>Best {formatMetricNumber(bestValue(trimmedValues), 4)}</span>
+        <span>Worst {formatMetricNumber(worstValue(trimmedValues), 4)}</span>
+        <span>Δ {formatMetricNumber(deltaValue(trimmedValues), 4)}</span>
       </div>
     </div>
   );
+}
+
+function trimTrailingNullValues(values: Array<number | null>) {
+  let end = values.length;
+
+  while (end > 0) {
+    const value = values[end - 1];
+
+    if (value !== null && value !== undefined && Number.isFinite(value)) {
+      break;
+    }
+
+    end -= 1;
+  }
+
+  return values.slice(0, end);
 }
 
 function firstValue(values: Array<number | null>) {

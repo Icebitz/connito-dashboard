@@ -30,14 +30,12 @@ export function ValidatorsSection({ rows, validatorHealth, isLoading }: Validato
   const validatorRows = useMemo(() => {
     return LEADERBOARD_VALIDATOR_SLOTS.map((slot, index) => buildValidatorSummary(rows, validatorHealth, slot, index));
   }, [rows, validatorHealth]);
-  const liveCount = validatorRows.filter((row) => row.status.trim().toLowerCase() === "live").length;
 
   return (
     <section className="lb-validator lb-panel">
       <div className="lb-section-top">
         <div className="lb-section-title">
           <span>Validators</span>
-          <strong>{isLoading ? "Loading validator status…" : `${liveCount} live · ${validatorRows.length} slots`}</strong>
         </div>
       </div>
 

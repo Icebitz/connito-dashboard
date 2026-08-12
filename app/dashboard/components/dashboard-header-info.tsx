@@ -56,7 +56,10 @@ export function DashboardHeaderInfo({ phase, isLoading }: DashboardHeaderInfoPro
           {upcoming.length ? upcoming.map((item, index) => (
             <li className="lb-header-upcoming-item" key={`${item.name}-${item.startBlock}`}>
               <span className="lb-header-upcoming-index">{`${index + 1}.`}</span>
-              <span className="lb-header-upcoming-name">{item.name}</span>
+              <span className="lb-header-upcoming-name">
+                <span>{item.name}</span>
+                {item.actor ? <span className="lb-header-upcoming-actor">{` (${item.actor})`}</span> : null}
+              </span>
               <span className="lb-header-upcoming-block">{`# ${formatBlock(item.startBlock)}`}</span>
             </li>
           )) : (

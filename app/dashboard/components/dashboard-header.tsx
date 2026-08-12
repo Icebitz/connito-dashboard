@@ -14,7 +14,7 @@ type DashboardHeaderProps = {
   apiVersion: LeaderboardApiVersion;
   refreshIntervalSeconds: RefreshIntervalSeconds;
   phase: DashboardModel["phase"];
-  subnet: DashboardModel["subnet"];
+  isLoading: boolean;
   subtitle?: ReactNode;
   onApiVersionChange: (apiVersion: LeaderboardApiVersion) => void;
   onRefreshIntervalChange: (seconds: RefreshIntervalSeconds) => void;
@@ -28,7 +28,7 @@ export function DashboardHeader({
   apiVersion,
   refreshIntervalSeconds,
   phase,
-  subnet,
+  isLoading,
   subtitle,
   onApiVersionChange,
   onRefreshIntervalChange,
@@ -47,7 +47,7 @@ export function DashboardHeader({
         onRefreshIntervalChange={onRefreshIntervalChange}
         onThemeToggle={onThemeToggle}
       />
-      <DashboardHeaderInfo phase={phase} subnet={subnet} />
+      <DashboardHeaderInfo phase={phase} isLoading={isLoading} />
     </header>
   );
 }

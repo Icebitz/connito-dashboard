@@ -25,6 +25,7 @@ export type MinerRow = {
   committedThisCycle: boolean | null;
   evaluatedThisRound: boolean | null;
   score: number | null;
+  scoreLatestAgeSeconds: number | null;
   loss: number | null;
   deltaLoss: number | null;
   incentive: number | null;
@@ -41,6 +42,8 @@ export type ValidatorMetric = {
   hotkey: string;
   score: number | null;
   scoreLatest: number | null;
+  scoreLatestAgeSeconds: number | null;
+  scoredWithinCyclePeriod: boolean | null;
   scoreAverage: number | null;
   scoreSamples: number | null;
   valLoss: number | null;
@@ -112,8 +115,6 @@ export type DashboardModel = {
     upcoming: UpcomingPhase[];
   };
   round: {
-    id: number | null;
-    baselineLoss: number | null;
     roster: number | null;
     scored: number | null;
     pending: number | null;

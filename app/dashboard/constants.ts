@@ -4,7 +4,7 @@ export type RefreshIntervalSeconds = typeof REFRESH_INTERVAL_OPTIONS_SECONDS[num
 export const DEFAULT_REFRESH_INTERVAL_SECONDS: RefreshIntervalSeconds = 12;
 export const SYNC_COUNTER_MS = 1_000;
 export const BLOCK_TIME_SECONDS = 12;
-export const ROUND_TREND_SAMPLE_COUNT = 50;
+export const ROUND_TREND_SAMPLE_COUNT = 100;
 export const LEADERBOARD_SOURCES = {
   v1: "https://dashboard-api.connito.ai/api/v1/leaderboard",
   v2: "http://dashboard-api-v2.connito.ai/api/v2/leaderboard",
@@ -19,3 +19,4 @@ export const API_VERSION_STORAGE_KEY = "connito-dashboard-api-version";
 export const REFRESH_INTERVAL_STORAGE_KEY = "connito-dashboard-refresh-interval";
 export const VALIDATOR_COLUMN_COUNT = 5;
 export const VALIDATOR_COLUMNS = Array.from({ length: VALIDATOR_COLUMN_COUNT }, (_, index) => index);
+export const LEADERBOARD_VALIDATOR_SLOTS = [2, 5] as const;

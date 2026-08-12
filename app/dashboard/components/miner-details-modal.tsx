@@ -4,8 +4,8 @@ import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 
-import { VALIDATOR_COLUMNS } from "../constants";
-import { formatAgeSecondsShort, formatInteger, formatMetricNumber, shortText } from "../format";
+import { LEADERBOARD_VALIDATOR_SLOTS } from "../constants";
+import { formatAgeSecondsShort, formatInteger, formatMetricNumber, getHuggingFaceRevisionUrl, shortText } from "../format";
 import { formatStatusLabel, statusTone } from "../status";
 import type { MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
 import { CopyHotkeyButton } from "./copy-hotkey-button";
@@ -36,16 +36,22 @@ export function MinerDetailsModal({ row, validatorHealth, onClose }: MinerDetail
   }, [onClose]);
 
   const validatorRows = useMemo(
-    () => VALIDATOR_COLUMNS.map((index) => ({
-      index,
-      metric: getValidatorMetricForColumn(row, index),
-      health: getValidatorHealthForSlot(validatorHealth, index)
+    () => LEADERBOARD_VALIDATOR_SLOTS.map((slot, index) => ({
+      slot,
+      metric: getValidatorMetricForSlot(row, slot, index),
+      health: getValidatorHealthForSlot(validatorHealth, slot)
     })),
     [row, validatorHealth]
   );
 
   const statusLabel = getRowStatusLabel(row);
-  const commitmentLabel = row.committedRecently || row.committedThisCycle ? "Committed" : "Not committed";
+  const commitLabel = getCommitLabel(row);
+  const groupLabel = row.cohortGroup?.trim() || "-";
+  const groupClassName = getGroupClassName(groupLabel);
+  const repoRevisionUrl = getHuggingFaceRevisionUrl(row.repo, row.revision);
+  const repoRevisionLabel = row.repo && row.repo !== "-" && row.revision && row.revision !== "-"
+    ? `${row.repo}@${row.revision}`
+    : row.repo;
 
   return (
     <div
@@ -69,16 +75,24 @@ export function MinerDetailsModal({ row, validatorHealth, onClose }: MinerDetail
             <div className="lb-modal-title-row">
               <h2 id="miner-details-title">UID {row.uid}</h2>
               <div className="lb-modal-badges">
+                <span className="lb-pill lb-pill-neutral">Rank #{formatInteger(row.rank)}</span>
                 <span className={`lb-pill lb-pill-${statusTone(statusLabel)}`}>{statusLabel}</span>
-                <span className="lb-pill lb-pill-neutral">{commitmentLabel}</span>
-                <span className="lb-pill lb-pill-neutral">Group {row.cohortGroup ?? "-"}</span>
+                <span className={`lb-pill lb-pill-${getCommitTone(commitLabel)}`}>{commitLabel}</span>
+                <span className={`lb-pill lb-pill-neutral lb-group-pill${groupClassName ? ` ${groupClassName}` : ""}`}>Group {groupLabel}</span>
               </div>
-            </div>
-            <div className="lb-modal-meta" id="miner-details-description">
-              <span>Hotkey &nbsp;<CopyHotkeyButton value={row.hotkey} className="lb-copy-button lb-copy-button-inline" start={10} end={7} /></span>
-              <span>Revision {shortText(row.revision, 14, 8)}</span>
-              <span>Last Commit Block {formatInteger(row.lastObservedCommitBlock)}</span>
-              <span>Lag {formatInteger(row.lastObservedCommitBlockLag)}</span>
+              <div className="lb-modal-meta" id="miner-details-description">
+                <span>Hotkey&nbsp;<CopyHotkeyButton value={row.hotkey} className="lb-copy-button lb-copy-button-inline" start={10} end={7} /></span>
+                <span>
+                  HF&nbsp;
+                  {repoRevisionUrl ? (
+                    <a href={repoRevisionUrl} target="_blank" rel="noreferrer" title={repoRevisionLabel}>
+                      {shortText(repoRevisionLabel, 20, 8)}
+                    </a>
+                  ) : (
+                    shortText(repoRevisionLabel, 20, 8)
+                  )}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -121,9 +135,9 @@ export function MinerDetailsModal({ row, validatorHealth, onClose }: MinerDetail
                   </tr>
                 </thead>
                 <tbody>
-                  {validatorRows.map(({ index, metric, health }) => (
-                    <tr key={`${row.uid}-validator-${index}`}>
-                      <td>{`V${index + 1}`}</td>
+                  {validatorRows.map(({ slot, metric, health }) => (
+                    <tr key={`${row.uid}-validator-${slot}`}>
+                      <td>{`V${slot}`}</td>
                       <td>{formatAssignmentRole(metric?.assignmentRole)}</td>
                       <td>
                         <span className={`lb-pill lb-pill-${statusTone(metric?.evalStatusLabel ?? health?.status)}`}>
@@ -161,7 +175,8 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [chartSize, setChartSize] = useState({ width: 960, height: 180 });
-  const points = values.map((value, index) => ({
+  const trimmedValues = trimTrailingNullValues(values);
+  const points = trimmedValues.map((value, index) => ({
     index,
     value: value !== null && value !== undefined && Number.isFinite(value) ? value : null
   }));
@@ -198,9 +213,9 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
 
     observer.observe(svg);
     return () => observer.disconnect();
-  }, [values.length]);
+  }, [trimmedValues.length]);
 
-  if (!values.length) {
+  if (!trimmedValues.length) {
     return <div className="lb-empty-state">No loss trend data</div>;
   }
 
@@ -216,7 +231,7 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
   const range = max - min || 1;
   const graphWidth = width - padLeft - padRight;
   const graphHeight = height - padTop - padBottom;
-  const xFor = (index: number) => padLeft + graphWidth * (index / Math.max(1, values.length - 1));
+  const xFor = (index: number) => padLeft + graphWidth * (index / Math.max(1, trimmedValues.length - 1));
   const yFor = (value: number) => padTop + ((max - value) / range) * graphHeight;
   const segments: Array<Array<{ x: number; y: number }>> = [];
   let currentSegment: Array<{ x: number; y: number }> = [];
@@ -238,12 +253,6 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
   }
 
   const linePaths = segments.map((segment) => segment.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" "));
-  const firstPoint = points.find((point) => point.value !== null);
-  const lastPoint = [...points].reverse().find((point) => point.value !== null);
-  const lineEndX = lastPoint ? xFor(lastPoint.index).toFixed(2) : xFor(0).toFixed(2);
-  const area = hasValidPoints && firstPoint && lastPoint && linePaths.length > 0
-    ? `${linePaths[0]} L ${lineEndX} ${height - padBottom} L ${firstPoint ? xFor(firstPoint.index).toFixed(2) : xFor(0).toFixed(2)} ${height - padBottom} Z`
-    : "";
   const hoveredPoint = hoveredIndex === null ? null : points[hoveredIndex] ?? null;
   const hoveredX = hoveredPoint ? xFor(hoveredPoint.index) : null;
   const hoveredY = hoveredPoint ? (hoveredPoint.value === null ? height - padBottom : yFor(hoveredPoint.value)) : null;
@@ -251,13 +260,13 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
   const tooltipHeight = 52;
   const hoveredTooltipX = hoveredX === null ? null : Math.max(10, Math.min(width - tooltipWidth - 10, hoveredX + 12));
   const hoveredTooltipY = hoveredY === null ? null : Math.max(10, Math.min(height - tooltipHeight - 10, hoveredY - 40));
-  const latest = rowLikeLatest(series, values);
+  const latest = rowLikeLatest(series, trimmedValues);
 
   const updateHover = (event: MouseEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const relativeX = ((event.clientX - rect.left) / rect.width) * width;
-    const index = Math.round(((relativeX - padLeft) / graphWidth) * (values.length - 1));
-    setHoveredIndex(Math.max(0, Math.min(values.length - 1, index)));
+    const index = Math.round(((relativeX - padLeft) / graphWidth) * (trimmedValues.length - 1));
+    setHoveredIndex(Math.max(0, Math.min(trimmedValues.length - 1, index)));
   };
 
   return (
@@ -293,7 +302,6 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
             : null}
         </g>
         <line className="lb-loss-chart-baseline" x1={padLeft} x2={width - padRight} y1={height - padBottom} y2={height - padBottom} />
-        {area ? <path className="lb-loss-chart-area" d={area} /> : null}
         {linePaths.map((d, index) => <path key={`line-${index}`} className="lb-loss-chart-line" d={d} />)}
         {points.map((point) => {
           if (point.value === null) {
@@ -343,14 +351,30 @@ function LossTrendChart({ values }: { values: Array<number | null> }) {
         ) : null}
       </svg>
       <div className="lb-loss-chart-footnote">
-        <span>First {formatMetricNumber(firstValue(values), 4)}</span>
-        <span>Latest {formatMetricNumber(lastValue(values), 4)}</span>
-        <span>Best {formatMetricNumber(bestValue(values), 4)}</span>
-        <span>Worst {formatMetricNumber(worstValue(values), 4)}</span>
-        <span>Δ {formatMetricNumber(deltaValue(values), 4)}</span>
+        <span>First {formatMetricNumber(firstValue(trimmedValues), 4)}</span>
+        <span>Latest {formatMetricNumber(lastValue(trimmedValues), 4)}</span>
+        <span>Best {formatMetricNumber(bestValue(trimmedValues), 4)}</span>
+        <span>Worst {formatMetricNumber(worstValue(trimmedValues), 4)}</span>
+        <span>Δ {formatMetricNumber(deltaValue(trimmedValues), 4)}</span>
       </div>
     </div>
   );
+}
+
+function trimTrailingNullValues(values: Array<number | null>) {
+  let end = values.length;
+
+  while (end > 0) {
+    const value = values[end - 1];
+
+    if (value !== null && value !== undefined && Number.isFinite(value)) {
+      break;
+    }
+
+    end -= 1;
+  }
+
+  return values.slice(0, end);
 }
 
 function firstValue(values: Array<number | null>) {
@@ -418,13 +442,13 @@ function getAverageValidatorLoss(row: MinerRow) {
   return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
 }
 
-function getValidatorMetricForColumn(row: MinerRow, index: number) {
+function getValidatorMetricForSlot(row: MinerRow, slot: number, fallbackIndex: number) {
   const hasSlots = row.validatorMetrics.some((metric) => metric.slot !== null);
-  return hasSlots ? row.validatorMetrics.find((metric) => metric.slot === index + 1) : row.validatorMetrics[index];
+  return hasSlots ? row.validatorMetrics.find((metric) => metric.slot === slot) : row.validatorMetrics[fallbackIndex];
 }
 
-function getValidatorHealthForSlot(validatorHealth: ValidatorHealth[], index: number) {
-  return validatorHealth.find((validator) => validator.slot === index + 1);
+function getValidatorHealthForSlot(validatorHealth: ValidatorHealth[], slot: number) {
+  return validatorHealth.find((validator) => validator.slot === slot);
 }
 
 function formatAssignmentRole(role: string | null | undefined) {
@@ -452,5 +476,59 @@ function getRowStatusLabel(row: MinerRow) {
     return "Pending";
   }
 
-  return "OK";
+  return "Weighted";
+}
+
+function getCommitLabel(row: MinerRow) {
+  if (row.committedRecently || row.committedThisCycle) {
+    return "Fresh";
+  }
+
+  if (row.lastObservedCommitBlockLag !== null) {
+    return "Lag";
+  }
+
+  return "Pending";
+}
+
+function getCommitTone(label: string) {
+  if (label === "Fresh") {
+    return "green";
+  }
+
+  if (label === "Lag") {
+    return "violet";
+  }
+
+  return "amber";
+}
+
+function getGroupClassName(group: string) {
+  const normalized = group.trim().toUpperCase();
+
+  if (!normalized || normalized === "-") {
+    return "";
+  }
+
+  if (normalized === "A") {
+    return "lb-group-pill-a";
+  }
+
+  if (normalized === "B") {
+    return "lb-group-pill-b";
+  }
+
+  if (normalized === "C") {
+    return "lb-group-pill-c";
+  }
+
+  if (normalized === "D") {
+    return "lb-group-pill-d";
+  }
+
+  if (normalized === "E") {
+    return "lb-group-pill-e";
+  }
+
+  return "lb-group-pill-generic";
 }

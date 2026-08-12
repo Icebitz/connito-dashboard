@@ -4,14 +4,14 @@ import { useMemo, useRef, useState } from "react";
 import type { CSSProperties, FocusEvent } from "react";
 
 import { MiniLineChart } from "./mini-line-chart";
-import { formatBlock, formatBlockMinutes, formatInteger, formatMetricNumber, formatPercent } from "../format";
+import { formatInteger, formatPercent } from "../format";
 import type { DashboardModel, HistoryPoint } from "../types";
 
 type RoundDetailsPanelProps = {
   round: DashboardModel["round"];
-  phase: DashboardModel["phase"];
   miners: number;
   history: HistoryPoint[];
+  isLoading: boolean;
 };
 
 type ProgressSegment = {
@@ -21,7 +21,7 @@ type ProgressSegment = {
   tone: "green" | "amber" | "red";
 };
 
-export function RoundDetailsPanel({ round, phase, miners, history }: RoundDetailsPanelProps) {
+export function RoundDetailsPanel({ round, miners, history, isLoading }: RoundDetailsPanelProps) {
   const roster = round.roster ?? null;
   const scored = round.scored ?? 0;
   const pending = round.pending ?? 0;
@@ -38,18 +38,16 @@ export function RoundDetailsPanel({ round, phase, miners, history }: RoundDetail
     { key: "failed", label: "Failed", count: failed, tone: "red" }
   ];
 
+  if (isLoading) {
+    return <RoundDetailsSkeleton />;
+  }
+
   return (
     <section className="lb-round lb-panel">
       <div className="lb-section-top">
         <div className="lb-section-title">
           <span>Round Details</span>
         </div>
-      </div>
-
-      <div className="lb-round-head">
-        <StatCell label="Round" value={`#${formatBlock(round.id)}`} />
-        <StatCell label="Baseline Loss" value={formatMetricNumber(round.baselineLoss, 4)} />
-        <StatCell label="Next Cycle In" value={formatBlockMinutes(phase.blocksRemaining)} />
       </div>
 
       <div className="lb-round-grid">
@@ -98,12 +96,16 @@ export function RoundDetailsPanel({ round, phase, miners, history }: RoundDetail
   );
 }
 
-function StatCell({ label, value }: { label: string; value: string }) {
+function RoundDetailsSkeleton() {
   return (
-    <div className="lb-round-head-cell">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
+    <section className="lb-round lb-panel" aria-busy="true" aria-label="Loading round details">
+      <div className="lb-section-top"><div className="lb-section-title"><span>Round Details</span></div></div>
+      <div className="lb-round-grid lb-round-grid-skeleton">
+        {Array.from({ length: 5 }, (_, index) => <article className="lb-round-tile" key={index}><i className="lb-skeleton" /><i className="lb-skeleton lb-skeleton-large" /><i className="lb-skeleton" /></article>)}
+      </div>
+      <div className="lb-round-progress-panel"><i className="lb-skeleton" /><i className="lb-skeleton lb-skeleton-large" /></div>
+      <div className="lb-chart-skeleton"><i className="lb-skeleton" /><i className="lb-skeleton" /><i className="lb-skeleton" /></div>
+    </section>
   );
 }
 

@@ -1,4 +1,4 @@
-import { LEADERBOARD_SOURCE, ROUND_TREND_SAMPLE_COUNT } from "./constants";
+import { BLOCK_TIME_SECONDS, LEADERBOARD_SOURCE, ROUND_TREND_SAMPLE_COUNT } from "./constants";
 import type { ApiResponse, DashboardModel, HistoryPoint, MinerRow, UpcomingPhase, ValidatorHealth, ValidatorMetric } from "./types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -64,6 +64,10 @@ function asNumberArray(value: unknown) {
     : [];
 }
 
+function asNullableNumberArray(value: unknown): Array<number | null> {
+  return Array.isArray(value) ? value.map(asNumber) : [];
+}
+
 function createEmptyValidatorHealth(slot: number): ValidatorHealth {
   return {
     slot,
@@ -121,7 +125,7 @@ function getCohortGroupLabel(group: string | null, code: number | null) {
   return null;
 }
 
-function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
+function getValidatorMetrics(row: Record<string, unknown>, cyclePeriodSeconds: number | null): ValidatorMetric[] {
   const metrics = Array.isArray(row.validator_metrics) ? row.validator_metrics.filter(isRecord) : [];
 
   if (metrics.length) {
@@ -133,6 +137,7 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
         ?? asNumber(metric.score_latest)
         ?? asNumber(metric.latest_score);
       const scoreLatest = asNumber(metric.score_latest) ?? asNumber(metric.latest_score);
+      const scoreLatestAgeSeconds = asNumber(metric.score_latest_age_seconds);
       const scoreAverage = asNumber(metric.score_avg) ?? asNumber(metric.avg_score) ?? asNumber(metric.score);
       const extractedAtBlock = asNumber(metric.extracted_at_block) ?? asNumber(metric.block);
 
@@ -144,6 +149,10 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
         hotkey: asText(metric.validator_hotkey) ?? "-",
         score,
         scoreLatest,
+        scoreLatestAgeSeconds,
+        scoredWithinCyclePeriod: scoreLatestAgeSeconds !== null && cyclePeriodSeconds !== null
+          ? scoreLatestAgeSeconds < cyclePeriodSeconds
+          : null,
         scoreAverage,
         scoreSamples: asNumber(metric.score_samples),
         valLoss: asNumber(metric.val_loss) ?? asNumber(metric.validation_loss) ?? asNumber(metric.loss),
@@ -178,6 +187,8 @@ function getValidatorMetrics(row: Record<string, unknown>): ValidatorMetric[] {
         hotkey: "-",
         score: null,
         scoreLatest: null,
+        scoreLatestAgeSeconds: null,
+        scoredWithinCyclePeriod: null,
         scoreAverage: null,
         scoreSamples: null,
         valLoss: null,
@@ -246,12 +257,12 @@ function getValidatorHealth(meta: Record<string, unknown> | null): ValidatorHeal
   return Array.from(bySlot.values()).sort((a, b) => (a.slot ?? Number.MAX_SAFE_INTEGER) - (b.slot ?? Number.MAX_SAFE_INTEGER));
 }
 
-function getLeaderboardRows(data: Record<string, unknown>): MinerRow[] {
+function getLeaderboardRows(data: Record<string, unknown>, cyclePeriodSeconds: number | null): MinerRow[] {
   const records = Array.isArray(data.leaderboard) ? data.leaderboard.filter(isRecord) : [];
 
   return records
     .map((row) => {
-      const validatorMetrics = getValidatorMetrics(row);
+      const validatorMetrics = getValidatorMetrics(row, cyclePeriodSeconds);
       const cohortGroupCode = asNumber(row.cohort_group_code) ?? asNumber(row.group_code);
 
       return {
@@ -275,10 +286,11 @@ function getLeaderboardRows(data: Record<string, unknown>): MinerRow[] {
           ?? asNumber(row.score_latest)
           ?? asNumber(row.latest_score)
           ?? averageNumbers(validatorMetrics.map((metric) => metric.score)),
+        scoreLatestAgeSeconds: asNumber(row.score_latest_age_seconds),
         loss: asNumber(row.val_loss) ?? asNumber(row.loss) ?? asNumber(row.validation_loss),
         deltaLoss: asNumber(row.delta_loss) ?? asNumber(row.loss_delta) ?? asNumber(row.deltaLoss),
         incentive: asNumber(row.incentive),
-        lossTrend: asNumberArray(row.loss_trend),
+        lossTrend: asNullableNumberArray(row.loss_trend),
         weight: asNumber(row.chain_weight_stake_weighted) ?? asNumber(row.weight_submitted),
         validatorMetrics
       };
@@ -427,7 +439,13 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
   const round = isRecord(data.round) ? data.round : null;
   const roundStats = isRecord(round?.stats) ? round.stats : null;
   const headBlock = asNumber(phase?.head_block);
-  const allRows = getLeaderboardRows(data);
+  const cycleIndex = asNumber(phase?.cycle_index);
+  const cycleLength = asNumber(phase?.cycle_length);
+  const cycleStart = cycleIndex !== null && cycleLength !== null ? cycleIndex * cycleLength : null;
+  const cycleBlockFromIndex = headBlock !== null && cycleStart !== null ? headBlock - cycleStart : null;
+  const indexedCycleBlock = cycleBlockFromIndex !== null && cycleBlockFromIndex >= 0 ? cycleBlockFromIndex : null;
+  const cyclePeriodSeconds = cycleLength === null ? null : cycleLength * BLOCK_TIME_SECONDS;
+  const allRows = getLeaderboardRows(data, cyclePeriodSeconds);
   const rows = allRows
     .filter((row) => !isBurnRow(row))
     .map((row, index) => ({
@@ -440,13 +458,7 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
   const phaseEnd = asNumber(phase?.ends_at_block);
   const blocksInto = headBlock !== null && phaseStart !== null ? headBlock - phaseStart : null;
   const blocksRemaining = asNumber(phase?.blocks_remaining);
-  const cycleIndex = asNumber(phase?.cycle_index);
-  const cycleLength = asNumber(phase?.cycle_length);
-  const cycleStart = cycleIndex !== null && cycleLength !== null ? cycleIndex * cycleLength : null;
-  const cycleBlockFromIndex = headBlock !== null && cycleStart !== null ? headBlock - cycleStart : null;
-  const cycleBlock = cycleBlockFromIndex !== null && cycleBlockFromIndex >= 0
-    ? cycleBlockFromIndex
-    : headBlock !== null && phaseStart !== null ? headBlock - phaseStart : null;
+  const cycleBlock = indexedCycleBlock ?? blocksInto;
   const upcomingPhases = getUpcomingPhases(phase, headBlock);
   const metaStale = asBoolean(meta?.stale) ?? false;
   const lastSuccessTs = asNumber(meta?.last_success_ts);
@@ -483,8 +495,6 @@ export function buildDashboardModel(leaderboard: ApiResponse | null): DashboardM
       upcoming: upcomingPhases
     },
     round: {
-      id: asNumber(round?.id),
-      baselineLoss: asNumber(round?.baseline_loss),
       roster: roundRoster,
       scored: roundScored,
       pending: roundPending,

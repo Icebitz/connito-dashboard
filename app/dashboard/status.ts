@@ -9,7 +9,7 @@ export function statusTone(status: string | null | undefined) {
     return "neutral";
   }
 
-  if (normalized.includes("ok") || normalized.includes("live") || normalized.includes("fresh") || normalized.includes("committed")) {
+  if (normalized.includes("ok") || normalized.includes("weighted") || normalized.includes("live") || normalized.includes("fresh") || normalized.includes("committed")) {
     return "green";
   }
 

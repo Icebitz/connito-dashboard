@@ -1,13 +1,8 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import {
-  DEFAULT_LEADERBOARD_API_VERSION,
-  LEADERBOARD_SOURCES,
-  type LeaderboardApiVersion
-} from "../../dashboard/constants";
+import { LEADERBOARD_SOURCE } from "../../dashboard/constants";
 
 const UPSTREAM_TIMEOUT_MS = 20_000;
 const MAX_ATTEMPTS = 2;
@@ -15,7 +10,7 @@ const HISTORY_DIR = join(process.cwd(), ".next", "cache");
 const HISTORY_ROUND_LIMIT = 8;
 
 type SourceConfig = {
-  version: LeaderboardApiVersion;
+  version: "v2";
   sourceUrl: string;
   cacheFile: string;
   currentHistoryFile: string;
@@ -33,7 +28,7 @@ type LeaderboardHistorySnapshot = {
   data: unknown;
 };
 
-const cachedLeaderboards = new Map<LeaderboardApiVersion, CachedLeaderboard>();
+const cachedLeaderboards = new Map<"v2", CachedLeaderboard>();
 
 export const dynamic = "force-dynamic";
 
@@ -43,21 +38,15 @@ function noStoreHeaders() {
   };
 }
 
-function getSourceConfig(version: LeaderboardApiVersion): SourceConfig {
+function getSourceConfig(): SourceConfig {
+  const version = "v2";
+
   return {
     version,
-    sourceUrl: LEADERBOARD_SOURCES[version],
+    sourceUrl: LEADERBOARD_SOURCE,
     cacheFile: join(process.cwd(), ".next", "cache", `connito-leaderboard-${version}.json`),
     currentHistoryFile: join(HISTORY_DIR, `leaderboard-${version}.json`)
   };
-}
-
-function getRequestedVersion(request: NextRequest): LeaderboardApiVersion {
-  const version = request.nextUrl.searchParams.get("version") ?? request.nextUrl.searchParams.get("apiVersion");
-
-  return version === "v1" || version === "v2" || version === "v3"
-    ? version
-    : DEFAULT_LEADERBOARD_API_VERSION;
 }
 
 async function readCache(config: SourceConfig) {
@@ -365,8 +354,8 @@ function getUpstreamError(body: unknown) {
   return body.error;
 }
 
-export async function GET(request: NextRequest) {
-  const config = getSourceConfig(getRequestedVersion(request));
+export async function GET() {
+  const config = getSourceConfig();
   let lastError = "Unknown leaderboard fetch error.";
   let lastStatus: number | undefined;
 

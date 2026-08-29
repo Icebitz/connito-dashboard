@@ -850,12 +850,7 @@ button:disabled {
   white-space: nowrap;
 }
 
-.lb-header-theme-button {
-  color: var(--accent);
-}
-
 .lb-action,
-.lb-api-version-field,
 .lb-refresh-interval-field,
 .lb-icon-button,
 .lb-page-button,
@@ -876,13 +871,11 @@ button:disabled {
   text-decoration: none;
 }
 
-.lb-api-version-field,
 .lb-refresh-interval-field {
   padding: 0 6px 0 9px;
   color: var(--text);
 }
 
-.lb-api-version-field select,
 .lb-refresh-interval-field select,
 .lb-page-size-field select {
   min-height: 30px;

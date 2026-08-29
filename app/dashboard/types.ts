@@ -87,8 +87,6 @@ export type UpcomingPhase = {
   actor: string | null;
 };
 
-export type Theme = "dark" | "light";
-
 export type DashboardStatus = "Degraded" | "Waiting" | "Cached" | "Partial" | "Live";
 
 export type DashboardModel = {

@@ -8,6 +8,7 @@ export const ROUND_TREND_SAMPLE_COUNT = 100;
 export const LEADERBOARD_SOURCE = "http://dashboard-api-v2.connito.ai/api/v2/leaderboard";
 export const GITHUB_REPOSITORY_URL = "https://github.com/Connito-AI/Connito";
 export const REFRESH_INTERVAL_STORAGE_KEY = "connito-dashboard-refresh-interval";
+export const BASELINE_LOSS_CHART_STORAGE_KEY = "connito-dashboard-show-baseline-loss-chart";
 export const VALIDATOR_COLUMN_COUNT = 5;
 export const VALIDATOR_COLUMNS = Array.from({ length: VALIDATOR_COLUMN_COUNT }, (_, index) => index);
 export const LEADERBOARD_VALIDATOR_SLOTS = [2, 5] as const;

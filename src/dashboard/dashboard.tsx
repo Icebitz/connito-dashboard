@@ -2,18 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { DashboardHeader } from "./dashboard/components/dashboard-header";
-import { LeaderboardSection } from "./dashboard/components/leaderboard-section";
-import { RoundDetailsPanel } from "./dashboard/components/round-details-panel";
-import { ValidatorsSection } from "./dashboard/components/validators-section";
+import { DashboardHeader } from "./components/dashboard-header";
+import { LeaderboardSection } from "./components/leaderboard-section";
+import { RoundDetailsPanel } from "./components/round-details-panel";
+import { ValidatorsSection } from "./components/validators-section";
 import {
   DEFAULT_REFRESH_INTERVAL_SECONDS,
   REFRESH_INTERVAL_OPTIONS_SECONDS,
   REFRESH_INTERVAL_STORAGE_KEY,
   type RefreshIntervalSeconds
-} from "./dashboard/constants";
-import { buildDashboardModel } from "./dashboard/model";
-import type { ApiResponse } from "./dashboard/types";
+} from "./constants";
+import { buildDashboardModel } from "./model";
+import type { ApiResponse } from "./types";
 
 export default function Leaderboard() {
   const [leaderboard, setLeaderboard] = useState<ApiResponse | null>(null);

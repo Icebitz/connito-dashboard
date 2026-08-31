@@ -1028,6 +1028,61 @@ button:disabled {
   text-transform: uppercase;
 }
 
+.lb-chart-visibility-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+}
+
+.lb-chart-visibility-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lb-chart-visibility-toggle i {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-3);
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.lb-chart-visibility-toggle i::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 10px;
+  height: 10px;
+  background: var(--muted);
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.lb-chart-visibility-toggle input:checked + i {
+  border-color: var(--accent);
+  background: var(--group-a-bg);
+}
+
+.lb-chart-visibility-toggle input:checked + i::after {
+  transform: translateX(16px);
+  background: var(--accent);
+}
+
+.lb-chart-visibility-toggle input:focus-visible + i {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 .lb-round {
   display: grid;
   gap: 12px;

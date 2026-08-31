@@ -4,7 +4,9 @@ import { useMemo, useRef, useState } from "react";
 import type { CSSProperties, FocusEvent } from "react";
 
 import { MiniLineChart } from "./mini-line-chart";
+import { BASELINE_LOSS_CHART_STORAGE_KEY } from "../constants";
 import { formatInteger, formatPercent } from "../format";
+import { usePersistedBoolean } from "../hooks/use-persisted-boolean";
 import type { DashboardModel, HistoryPoint } from "../types";
 
 type RoundDetailsPanelProps = {
@@ -22,6 +24,7 @@ type ProgressSegment = {
 };
 
 export function RoundDetailsPanel({ round, miners, history, isLoading }: RoundDetailsPanelProps) {
+  const [showBaselineLossChart, setShowBaselineLossChart] = usePersistedBoolean(BASELINE_LOSS_CHART_STORAGE_KEY, true);
   const roster = round.roster ?? null;
   const scored = round.scored ?? 0;
   const pending = round.pending ?? 0;
@@ -31,7 +34,9 @@ export function RoundDetailsPanel({ round, miners, history, isLoading }: RoundDe
   const pendingPercent = ratio(pending, rosterTotal);
   const failedPercent = ratio(failed, rosterTotal);
   const successfulCommits = round.successfulCommitsCount ?? null;
-  const commitSuccessPercent = round.successfulCommitsRate ?? ratio(successfulCommits, miners);
+  const commitSuccessPercent = round.successfulCommitsRate === null
+    ? ratio(successfulCommits, miners)
+    : round.successfulCommitsRate * 100;
   const segmentSummary: ProgressSegment[] = [
     { key: "scored", label: "Scored", count: scored, tone: "green" },
     { key: "pending", label: "Pending", count: pending, tone: "amber" },
@@ -48,6 +53,15 @@ export function RoundDetailsPanel({ round, miners, history, isLoading }: RoundDe
         <div className="lb-section-title">
           <span>Round Details</span>
         </div>
+        <label className="lb-chart-visibility-toggle">
+          <span>Baseline loss graph</span>
+          <input
+            type="checkbox"
+            checked={showBaselineLossChart}
+            onChange={(event) => setShowBaselineLossChart(event.currentTarget.checked)}
+          />
+          <i aria-hidden="true" />
+        </label>
       </div>
 
       <div className="lb-round-grid">
@@ -91,7 +105,7 @@ export function RoundDetailsPanel({ round, miners, history, isLoading }: RoundDe
         <RoundProgressBar segments={segmentSummary} total={rosterTotal} />
       </div>
 
-      <MiniLineChart points={history} />
+      {showBaselineLossChart ? <MiniLineChart points={history} /> : null}
     </section>
   );
 }

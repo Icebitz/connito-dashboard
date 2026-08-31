@@ -1,8 +1,8 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { NextResponse } from "next/server";
+import type { NextApiRequest, NextApiResponse } from "next";
 
-import { LEADERBOARD_SOURCE } from "../../dashboard/constants";
+import { LEADERBOARD_SOURCE } from "../../src/dashboard/constants";
 
 const UPSTREAM_TIMEOUT_MS = 20_000;
 const MAX_ATTEMPTS = 2;
@@ -30,7 +30,17 @@ type LeaderboardHistorySnapshot = {
 
 const cachedLeaderboards = new Map<"v2", CachedLeaderboard>();
 
-export const dynamic = "force-dynamic";
+type ApiResult = {
+  body: unknown;
+  headers?: Record<string, string>;
+  status: number;
+};
+
+const NextResponse = {
+  json(body: unknown, init?: { headers?: Record<string, string>; status?: number }): ApiResult {
+    return { body, headers: init?.headers, status: init?.status ?? 200 };
+  }
+};
 
 function noStoreHeaders() {
   return {
@@ -354,7 +364,7 @@ function getUpstreamError(body: unknown) {
   return body.error;
 }
 
-export async function GET() {
+async function getLeaderboardResponse() {
   const config = getSourceConfig();
   let lastError = "Unknown leaderboard fetch error.";
   let lastStatus: number | undefined;
@@ -412,4 +422,14 @@ export async function GET() {
   }
 
   return fallbackResponse(config, lastError, lastStatus);
+}
+
+export default async function handler(_request: NextApiRequest, response: NextApiResponse) {
+  const result = await getLeaderboardResponse();
+
+  for (const [name, value] of Object.entries(result.headers ?? {})) {
+    response.setHeader(name, value);
+  }
+
+  response.status(result.status).json(result.body);
 }

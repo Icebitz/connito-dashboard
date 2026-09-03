@@ -78,6 +78,21 @@ export type HistoryPoint = {
   timestamp: number | null;
 };
 
+export type MinerHistoryPoint = [timestamp: number, value: number | null];
+
+export type MinerHistorySeries = {
+  val_loss?: Record<string, MinerHistoryPoint[]>;
+  score_latest?: Record<string, MinerHistoryPoint[]>;
+  score_avg?: Record<string, MinerHistoryPoint[]>;
+  rank?: Record<string, MinerHistoryPoint[]>;
+  rank_total?: Record<string, MinerHistoryPoint[]>;
+};
+
+export type MinerHistoryResponse = {
+  data?: { miner_uid?: number; range?: { start_unix?: number; end_unix?: number }; series?: MinerHistorySeries };
+  error?: string;
+};
+
 export type UpcomingPhase = {
   name: string;
   startBlock: number;

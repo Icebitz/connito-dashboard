@@ -7,7 +7,7 @@ import type { MouseEvent } from "react";
 import { LEADERBOARD_VALIDATOR_SLOTS } from "../constants";
 import { formatAgeSecondsShort, formatInteger, formatMetricNumber, getHuggingFaceRevisionUrl, shortText } from "../format";
 import { formatStatusLabel, statusTone } from "../status";
-import type { MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
+import type { MinerHistoryResponse, MinerHistorySeries, MinerRow, ValidatorHealth, ValidatorMetric } from "../types";
 import { CopyHotkeyButton } from "./copy-hotkey-button";
 
 type MinerDetailsModalProps = {
@@ -17,6 +17,31 @@ type MinerDetailsModalProps = {
 };
 
 export function MinerDetailsModal({ row, validatorHealth, onClose }: MinerDetailsModalProps) {
+  const [history, setHistory] = useState<MinerHistorySeries | null>(null);
+  const [historyRange, setHistoryRange] = useState<{ start: number | null; end: number | null }>({ start: null, end: null });
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const loadHistory = async () => {
+      setHistoryLoading(true);
+      setHistoryError(null);
+      try {
+        const response = await fetch("/api/miner/" + encodeURIComponent(row.uid) + "/history", { cache: "no-store", signal: controller.signal });
+        const body = (await response.json()) as MinerHistoryResponse;
+        if (!response.ok) throw new Error(body.error ?? "Miner history request failed.");
+        setHistory(body.data?.series ?? {});
+        setHistoryRange({ start: body.data?.range?.start_unix ?? null, end: body.data?.range?.end_unix ?? null });
+      } catch (error) {
+        if (!controller.signal.aborted) setHistoryError(error instanceof Error ? error.message : "Miner history request failed.");
+      } finally {
+        if (!controller.signal.aborted) setHistoryLoading(false);
+      }
+    };
+    void loadHistory();
+    return () => controller.abort();
+  }, [row.uid]);
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -110,9 +135,6 @@ export function MinerDetailsModal({ row, validatorHealth, onClose }: MinerDetail
             <SummaryTile label="Avg Val Loss" value={formatMetricNumber(getAverageValidatorLoss(row), 4)} />
           </div>
 
-          <section className="lb-modal-block">
-            <LossTrendChart values={row.lossTrend} />
-          </section>
 
           <section className="lb-modal-block">
             <div className="lb-modal-block-head">
@@ -156,10 +178,61 @@ export function MinerDetailsModal({ row, validatorHealth, onClose }: MinerDetail
               </table>
             </div>
           </section>
+
+          <MinerHistoryTable series={history} range={historyRange} loading={historyLoading} error={historyError} />
         </div>
       </section>
     </div>
   );
+}
+
+
+const HISTORY_VALIDATOR_SLOTS = [2, 5] as const;
+
+function MinerHistoryTable({ series, range, loading, error }: { series: MinerHistorySeries | null; range: { start: number | null; end: number | null }; loading: boolean; error: string | null }) {
+  const rows = useMemo(() => buildHistoryRows(series, range), [series, range]);
+  return (
+    <section className="lb-modal-block">
+      <div className="lb-modal-block-head"><span>Miner History (v2, v5)</span></div>
+      {loading ? <div className="lb-empty-state">Loading miner history…</div> : null}
+      {!loading && error ? <div className="lb-empty-state">{error}</div> : null}
+      {!loading && !error && rows.length === 0 ? <div className="lb-empty-state">No history data for V2 or V5</div> : null}
+      {!loading && !error && rows.length > 0 ? (
+        <div className="lb-history-columns">
+          {HISTORY_VALIDATOR_SLOTS.map((slot) => (
+            <div className="lb-history-column" key={slot}>
+              <div className="lb-modal-table-wrap"><table className="lb-modal-table lb-history-table">
+                <thead><tr><th>Time (UTC)</th><th>Val Loss</th><th>Latest</th><th>Average</th><th>Rank</th></tr></thead>
+                <tbody>{rows.filter((item) => item.slot === slot).map((item) => (
+                  <tr key={`${item.timestamp}-${item.slot}`}><td>{formatHistoryTimestamp(item.timestamp)}</td><td>{formatMetricNumber(item.valLoss, 4)}</td><td>{formatMetricNumber(item.scoreLatest, 4)}</td><td>{formatMetricNumber(item.scoreAverage, 4)}</td><td>{item.rank === null ? "-" : `${formatInteger(item.rank)}${item.rankTotal === null ? "" : ` / ${formatInteger(item.rankTotal)}`}`}</td></tr>
+                ))}</tbody>
+              </table></div>
+            </div>
+          ))}
+        </div>
+      ) : null} </section>
+  );
+}
+
+function buildHistoryRows(series: MinerHistorySeries | null, range: { start: number | null; end: number | null }) {
+  if (!series) return [];
+  return HISTORY_VALIDATOR_SLOTS.flatMap((slot) => {
+    const key = String(slot);
+    const timestamps = new Set<number>();
+    const fields = [series.val_loss?.[key], series.score_latest?.[key], series.score_avg?.[key], series.rank?.[key], series.rank_total?.[key]];
+    fields.forEach((points) => points?.forEach(([timestamp]) => timestamps.add(timestamp)));
+    const maps = fields.map((points) => new Map(points ?? []));
+    return Array.from(timestamps, (timestamp) => ({
+      timestamp, slot, valLoss: maps[0].get(timestamp) ?? null, scoreLatest: maps[1].get(timestamp) ?? null,
+      scoreAverage: maps[2].get(timestamp) ?? null, rank: maps[3].get(timestamp) ?? null, rankTotal: maps[4].get(timestamp) ?? null
+    }));
+  }).filter((item) => (range.start === null || item.timestamp >= range.start) && (range.end === null || item.timestamp <= range.end))
+    .sort((a, b) => b.timestamp - a.timestamp || a.slot - b.slot);
+}
+
+function formatHistoryTimestamp(timestamp: number) {
+  return new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })
+    .format(new Date(timestamp * 1_000));
 }
 
 function SummaryTile({ label, value }: { label: string; value: string }) {

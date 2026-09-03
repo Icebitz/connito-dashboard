@@ -2523,3 +2523,19 @@ button:disabled {
     justify-content: flex-start;
   }
 }
+
+.lb-history-table { min-width: 720px; }
+.lb-history-table tbody td:nth-child(1),
+.lb-history-table tbody td:nth-child(3),
+.lb-history-table tbody td:nth-child(4),
+.lb-history-table tbody td:nth-child(5),
+.lb-history-table tbody td:nth-child(6) {
+  font-family: var(--number-font);
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+}
+.lb-history-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.lb-history-column { min-width: 0; display: grid; gap: 6px; }
+.lb-history-column-title { color: var(--heading); font-size: 12px; font-weight: 900; }
+.lb-history-column .lb-history-table { min-width: 0; }
+@media (max-width: 760px) { .lb-history-columns { grid-template-columns: 1fr; } }

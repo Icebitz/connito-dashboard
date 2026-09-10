@@ -101,7 +101,7 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
           </small>
 
           <div className="lb-leaderboard-controls">
-            <label className="lb-pinned-only-switch">
+            <label className="lb-switch">
               <span>Grouped Only</span>
               <input
                 type="checkbox"
@@ -111,7 +111,7 @@ export function LeaderboardSection({ allRows, filteredRows, query, validatorHeal
               <i aria-hidden="true" />
             </label>
 
-            <label className="lb-pinned-only-switch">
+            <label className="lb-switch">
               <span>Pinned Only</span>
               <input
                 type="checkbox"

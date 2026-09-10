@@ -53,7 +53,7 @@ export function RoundDetailsPanel({ round, miners, history, isLoading }: RoundDe
         <div className="lb-section-title">
           <span>Round Details</span>
         </div>
-        <label className="lb-chart-visibility-toggle">
+        <label className="lb-switch">
           <span>Baseline loss graph</span>
           <input
             type="checkbox"

@@ -16,6 +16,7 @@ type DashboardHeaderBarProps = {
   source: string;
   refreshIntervalSeconds: RefreshIntervalSeconds;
   subtitle?: ReactNode;
+  summary: ReactNode;
   onRefreshIntervalChange: (seconds: RefreshIntervalSeconds) => void;
 };
 
@@ -24,6 +25,7 @@ export function DashboardHeaderBar({
   source,
   refreshIntervalSeconds,
   subtitle,
+  summary,
   onRefreshIntervalChange
 }: DashboardHeaderBarProps) {
   return (
@@ -39,6 +41,8 @@ export function DashboardHeaderBar({
           {subtitle ? <div className="lb-header-subline">{subtitle}</div> : null}
         </div>
       </div>
+
+      {summary}
 
       <div className="lb-header-actions">
         <label className="lb-refresh-interval-field" title="Select refresh interval">

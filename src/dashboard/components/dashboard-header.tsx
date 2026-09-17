@@ -33,9 +33,9 @@ export function DashboardHeader({
         source={source}
         refreshIntervalSeconds={refreshIntervalSeconds}
         subtitle={subtitle}
+        summary={<DashboardHeaderInfo phase={phase} isLoading={isLoading} />}
         onRefreshIntervalChange={onRefreshIntervalChange}
       />
-      <DashboardHeaderInfo phase={phase} isLoading={isLoading} />
     </header>
   );
 }

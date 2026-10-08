@@ -572,6 +572,11 @@ button:disabled {
 }
 
 .lb-header-title span {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  line-height: 1;
+  white-space: nowrap;
   font-family: var(--number-font);
   font-size: 18px;
   font-weight: 300;
